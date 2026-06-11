@@ -1,0 +1,109 @@
+generator client { provider = "prisma-client-js" }
+datasource db { provider = "sqlite" url = env("DATABASE_URL") }
+
+enum Area { FINANCEIRO COMERCIAL RH OPERACOES MARKETING ADMINISTRATIVO }
+enum BscPerspective { FINANCEIRA CLIENTES PROCESSOS_INTERNOS PESSOAS_E_CULTURA }
+enum IndicatorType { EFICIENCIA EFICACIA EFETIVIDADE QUALIDADE }
+enum IndicatorLevel { ESTRATEGICO TATICO OPERACIONAL }
+enum Polarity { MAIOR_MELHOR MENOR_MELHOR }
+enum Frequency { DIARIA SEMANAL MENSAL TRIMESTRAL SEMESTRAL ANUAL }
+enum Status { ATIVO EM_REVISAO DESCONTINUADO }
+enum TrafficLight { VERDE AMARELO VERMELHO }
+
+model Indicator {
+  id String @id @default(cuid())
+  code String @unique
+  name String
+  area Area
+  responsiblePrimary String @default("Coordenação Administrativa")
+  responsibleSecondary String?
+  status Status @default(ATIVO)
+  bscPerspective BscPerspective
+  strategicObjective String
+  linkedProject String?
+  organizationalGoal String?
+  type IndicatorType
+  level IndicatorLevel
+  polarity Polarity
+  unit String
+  collectionFrequency Frequency @default(MENSAL)
+  analysisFrequency Frequency @default(MENSAL)
+  purpose String
+  operationalDefinition String
+  relevance String?
+  limitations String?
+  formula String
+  numerator String?
+  denominator String?
+  inclusionCriteria String?
+  exclusionCriteria String?
+  sourceSystem String
+  storageLocation String?
+  collectionMethod String
+  collectionOwner String @default("Coordenação Administrativa")
+  evidence String?
+  isAiEligible Boolean @default(false)
+  isAiIntegrable Boolean @default(false)
+  dashboardName String?
+  aiAgentName String?
+  dataReliability String @default("Médio")
+  requiresAudit Boolean @default(true)
+  auditFrequency Frequency?
+  okrs OkrIndicator[]
+  goals Goal[]
+  results Result[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Goal {
+  id String @id @default(cuid())
+  indicatorId String
+  indicator Indicator @relation(fields:[indicatorId], references:[id], onDelete:Cascade)
+  year Int
+  quarter Int?
+  month Int?
+  targetValue Float
+  alertValue Float?
+  minimumValue Float?
+  idealValue Float?
+  createdAt DateTime @default(now())
+  @@index([indicatorId, year, quarter, month])
+}
+
+model Result {
+  id String @id @default(cuid())
+  indicatorId String
+  indicator Indicator @relation(fields:[indicatorId], references:[id], onDelete:Cascade)
+  referenceDate DateTime
+  actualValue Float
+  targetValue Float
+  achievement Float
+  trafficLight TrafficLight
+  analysis String?
+  actionPlan String?
+  createdAt DateTime @default(now())
+  @@index([indicatorId, referenceDate])
+}
+
+model Okr {
+  id String @id @default(cuid())
+  title String
+  objective String
+  area Area
+  year Int
+  quarter Int?
+  owner String
+  indicators OkrIndicator[]
+  createdAt DateTime @default(now())
+}
+
+model OkrIndicator {
+  id String @id @default(cuid())
+  okrId String
+  indicatorId String
+  weight Float @default(1)
+  okr Okr @relation(fields:[okrId], references:[id], onDelete:Cascade)
+  indicator Indicator @relation(fields:[indicatorId], references:[id], onDelete:Cascade)
+  @@unique([okrId, indicatorId])
+}

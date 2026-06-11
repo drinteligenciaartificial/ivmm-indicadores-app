@@ -1,0 +1,1 @@
+export function KpiCard({label,value,description}:{label:string;value:string|number;description?:string}){return <div className="card"><div className="metric-label">{label}</div><div className="metric-value">{value}</div>{description&&<p style={{color:"var(--muted)",marginBottom:0}}>{description}</p>}</div>}

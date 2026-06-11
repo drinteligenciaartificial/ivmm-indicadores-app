@@ -1,0 +1,4 @@
+import "./globals.css"; import Link from "next/link";
+export const metadata={title:"IVMM | Sistema de Indicadores",description:"Sistema de Gestão por Indicadores do IVMM"};
+const links=[["/","Dashboard Executivo"],["/indicadores","Banco de Indicadores"],["/indicadores/novo","Nova Ficha Técnica"],["/scorecard","Scorecard por Área"],["/bsc","Matriz BSC"],["/okrs","OKRs"],["/head-operacoes","Head de Operações"],["/conselho","Conselho Consultivo"],["/ia-automacao","IA e Automação"]];
+export default function RootLayout({children}:{children:React.ReactNode}){return <html lang="pt-BR"><body><div className="layout"><aside className="sidebar"><h1>IVMM<br/>Gestão por Indicadores</h1><nav>{links.map(([h,l])=><Link key={h} href={h}>{l}</Link>)}</nav></aside><main className="main">{children}</main></div></body></html>}
