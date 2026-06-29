@@ -5,8 +5,7 @@ services:
     plan: free
     region: virginia
     buildCommand: npm ci && npm run build:render
-    preDeployCommand: npm run db:deploy:render && npm run bootstrap:production
-    startCommand: npm start
+    startCommand: npm run db:deploy:render && npm run bootstrap:production && npm start
     healthCheckPath: /login
     autoDeploy: true
     envVars:
