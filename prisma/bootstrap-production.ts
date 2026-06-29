@@ -56,19 +56,19 @@ async function main() {
     });
   }
 
-  for (const profile of productionProfiles) {
-    const existingUser = await prisma.user.findUnique({ where: { email: profile.email } });
-    if (!existingUser) {
-      await prisma.user.create({
-        data: {
+  const profilesMarker = await prisma.auditLog.findFirst({
+    where: { entity: "SYSTEM", action: "PRODUCTION_PROFILES_V1" },
+  });
+
+  if (!profilesMarker) {
+    for (const profile of productionProfiles) {
+      await prisma.user.upsert({
+        where: { email: profile.email },
+        create: {
           ...profile,
           permissions: JSON.stringify(profile.permissions),
         },
-      });
-    } else if (existingUser.updatedAt.getTime() - existingUser.createdAt.getTime() < 60_000) {
-      await prisma.user.update({
-        where: { id: existingUser.id },
-        data: {
+        update: {
           name: profile.name,
           password: profile.password,
           role: profile.role,
@@ -76,6 +76,16 @@ async function main() {
         },
       });
     }
+
+    await prisma.auditLog.create({
+      data: {
+        entity: "SYSTEM",
+        action: "PRODUCTION_PROFILES_V1",
+        summary: "Perfis-padrão de produção criados e normalizados.",
+        actorName: "Bootstrap Render",
+        actorRole: "SISTEMA",
+      },
+    });
   }
 
   if (indicatorCount === 0) {
