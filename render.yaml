@@ -4,7 +4,7 @@ services:
     runtime: node
     plan: free
     region: virginia
-    buildCommand: npm ci && npm run build:render
+    buildCommand: npm ci --include=dev && npm run build:render
     startCommand: npm run db:deploy:render && npm run bootstrap:production && npm start
     healthCheckPath: /login
     autoDeploy: true
