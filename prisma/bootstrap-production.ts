@@ -65,6 +65,16 @@ async function main() {
           permissions: JSON.stringify(profile.permissions),
         },
       });
+    } else if (existingUser.updatedAt.getTime() - existingUser.createdAt.getTime() < 60_000) {
+      await prisma.user.update({
+        where: { id: existingUser.id },
+        data: {
+          name: profile.name,
+          password: profile.password,
+          role: profile.role,
+          permissions: JSON.stringify(profile.permissions),
+        },
+      });
     }
   }
 
