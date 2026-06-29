@@ -22,7 +22,7 @@ const productionProfiles = [
   {
     name: "Conselho Consultivo",
     email: "conselho@ivmm.local",
-    password: "scrypt$0a74127e1bbd969ae1c665f53bd47357$69d96c1b489f2d968e1d69b6a161fb99e61f8844966cecee05d2f451b9e4c47bda84d282e24e745bfeb7991b2d127b85ac5d320ec8755e4af",
+    password: "scrypt$d50e843dad1c83cfdca4239e3ad8c592$2255362e132285830370bd52a8105736857e8ddc930dea04f67721afedeb34c9afd9a7caf98410ba7cfc6c3cb0132f83e86bc80687b5acd88542011339be32b8",
     role: "CONSELHO_CONSULTIVO",
     permissions: ["dashboard", "indicadores", "scorecard", "bsc", "okrs", "conselho", "exportacoes"],
   },
@@ -82,6 +82,27 @@ async function main() {
         entity: "SYSTEM",
         action: "PRODUCTION_PROFILES_V1",
         summary: "Perfis-padrão de produção criados e normalizados.",
+        actorName: "Bootstrap Render",
+        actorRole: "SISTEMA",
+      },
+    });
+  }
+
+  const councilMarker = await prisma.auditLog.findFirst({
+    where: { entity: "SYSTEM", action: "CONSELHO_PASSWORD_V2" },
+  });
+
+  if (!councilMarker) {
+    const council = productionProfiles.find((profile) => profile.role === "CONSELHO_CONSULTIVO")!;
+    await prisma.user.update({
+      where: { email: council.email },
+      data: { password: council.password },
+    });
+    await prisma.auditLog.create({
+      data: {
+        entity: "SYSTEM",
+        action: "CONSELHO_PASSWORD_V2",
+        summary: "Senha temporária do Conselho Consultivo normalizada.",
         actorName: "Bootstrap Render",
         actorRole: "SISTEMA",
       },
