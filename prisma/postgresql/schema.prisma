@@ -1,0 +1,132 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Indicator {
+  id String @id @default(cuid())
+  code String @unique
+  name String
+  area String
+  responsiblePrimary String @default("Coordenação Administrativa")
+  responsibleSecondary String?
+  status String @default("ATIVO")
+  bscPerspective String
+  strategicObjective String
+  linkedProject String?
+  organizationalGoal String?
+  type String
+  level String
+  polarity String
+  unit String
+  collectionFrequency String @default("MENSAL")
+  analysisFrequency String @default("MENSAL")
+  purpose String
+  operationalDefinition String
+  relevance String?
+  limitations String?
+  formula String
+  numerator String?
+  denominator String?
+  inclusionCriteria String?
+  exclusionCriteria String?
+  sourceSystem String
+  storageLocation String?
+  collectionMethod String
+  collectionOwner String @default("Coordenação Administrativa")
+  evidence String?
+  isAiEligible Boolean @default(false)
+  isAiIntegrable Boolean @default(false)
+  dashboardName String?
+  aiAgentName String?
+  dataReliability String @default("Médio")
+  requiresAudit Boolean @default(true)
+  auditFrequency String?
+  okrs OkrIndicator[]
+  goals Goal[]
+  results Result[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Goal {
+  id String @id @default(cuid())
+  indicatorId String
+  indicator Indicator @relation(fields: [indicatorId], references: [id], onDelete: Cascade)
+  year Int
+  quarter Int?
+  month Int?
+  targetValue Float
+  alertValue Float?
+  minimumValue Float?
+  idealValue Float?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([indicatorId, year, quarter, month])
+}
+
+model Result {
+  id String @id @default(cuid())
+  indicatorId String
+  indicator Indicator @relation(fields: [indicatorId], references: [id], onDelete: Cascade)
+  referenceDate DateTime
+  actualValue Float
+  targetValue Float
+  achievement Float
+  trafficLight String
+  analysis String?
+  actionPlan String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([indicatorId, referenceDate])
+}
+
+model Okr {
+  id String @id @default(cuid())
+  title String
+  objective String
+  area String
+  year Int
+  quarter Int?
+  owner String
+  indicators OkrIndicator[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model OkrIndicator {
+  id String @id @default(cuid())
+  okrId String
+  indicatorId String
+  weight Float @default(1)
+  okr Okr @relation(fields: [okrId], references: [id], onDelete: Cascade)
+  indicator Indicator @relation(fields: [indicatorId], references: [id], onDelete: Cascade)
+  @@unique([okrId, indicatorId])
+}
+
+model User {
+  id String @id @default(cuid())
+  name String
+  email String @unique
+  password String
+  role String
+  permissions String @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AuditLog {
+  id String @id @default(cuid())
+  entity String
+  entityId String?
+  action String
+  summary String
+  actorName String
+  actorRole String
+  createdAt DateTime @default(now())
+  @@index([entity, entityId, createdAt])
+}

@@ -1,0 +1,43 @@
+{
+  "name": "ivmm-indicadores-app",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22 <25"
+  },
+  "scripts": {
+    "dev": "next dev --webpack -H 127.0.0.1 -p 3001",
+    "build": "next build",
+    "build:render": "prisma generate --schema=prisma/postgresql/schema.prisma && next build",
+    "start": "next start",
+    "setup:local": "npm install && npx prisma generate && npx prisma db push && npm run seed",
+    "reset:local": "npx prisma db push --force-reset --accept-data-loss && npm run seed",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio",
+    "import:official": "node --experimental-strip-types prisma/import-official-data.ts",
+    "db:deploy:render": "prisma migrate deploy --schema=prisma/postgresql/schema.prisma",
+    "bootstrap:production": "node --experimental-strip-types prisma/bootstrap-production.ts",
+    "seed": "node --experimental-strip-types prisma/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "5.22.0",
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "recharts": "latest",
+    "lucide-react": "latest",
+    "clsx": "latest"
+  },
+  "devDependencies": {
+    "prisma": "5.22.0",
+    "tsx": "latest",
+    "typescript": "latest",
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "eslint": "latest",
+    "eslint-config-next": "latest"
+  }
+}
