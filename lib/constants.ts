@@ -80,6 +80,7 @@ export const features = [
   ["historico", "Histórico de Alterações", "/historico"],
   ["exportacoes", "Exportações Excel/PDF", "/export"],
   ["usuarios", "Administração de Usuários", "/usuarios"],
+  ["integracoes", "Integrações", "/integracoes/kommo"],
 ] as const;
 
 export type FeatureKey = (typeof features)[number][0];

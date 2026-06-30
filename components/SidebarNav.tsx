@@ -15,6 +15,7 @@ import {
   LibraryBig,
   Target,
   UsersRound,
+  PlugZap,
 } from "lucide-react";
 
 const icons = {
@@ -31,6 +32,7 @@ const icons = {
   "ia-automacao": Bot,
   historico: History,
   usuarios: UsersRound,
+  integracoes: PlugZap,
 };
 
 type SidebarLink = { key: string; label: string; href: string };
