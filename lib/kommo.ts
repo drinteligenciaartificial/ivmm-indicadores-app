@@ -135,17 +135,18 @@ export async function upsertKommoEntity(integrationId: string, entityType: strin
   return true;
 }
 
-async function importCollection(entityType: string, endpoint: string, embeddedKey: string) {
+async function importCollection(entityType: string, endpoint: string, embeddedKey: string, paginated = true) {
   let page = 1;
   let imported = 0;
   while (true) {
     const separator = endpoint.includes("?") ? "&" : "?";
-    const { connection, data } = await kommoRequest(`${endpoint}${separator}limit=${PAGE_SIZE}&page=${page}`);
+    const path = paginated ? `${endpoint}${separator}limit=${PAGE_SIZE}&page=${page}` : endpoint;
+    const { connection, data } = await kommoRequest(path);
     const entities = (data?._embedded?.[embeddedKey] ?? []) as KommoEntity[];
     for (const entity of entities) {
       if (await upsertKommoEntity(connection.id, entityType, entity)) imported += 1;
     }
-    if (entities.length < PAGE_SIZE || !data?._links?.next?.href) break;
+    if (!paginated || entities.length < PAGE_SIZE || !data?._links?.next?.href) break;
     page += 1;
   }
   return imported;
@@ -170,7 +171,7 @@ export async function syncKommo() {
     imported += await importCollection("CONTACT", "/api/v4/contacts?with=leads", "contacts");
     imported += await importCollection("COMPANY", "/api/v4/companies?with=leads,contacts", "companies");
     imported += await importCollection("USER", "/api/v4/users", "users");
-    imported += await importCollection("PIPELINE", "/api/v4/leads/pipelines", "pipelines");
+    imported += await importCollection("PIPELINE", "/api/v4/leads/pipelines", "pipelines", false);
     const finishedAt = new Date();
     await prisma.$transaction([
       prisma.integrationSync.update({ where: { id: sync.id }, data: { status: "CONCLUIDO", importedCount: imported, finishedAt } }),
