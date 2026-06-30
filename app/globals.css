@@ -507,6 +507,104 @@ textarea {
   color: var(--navy);
 }
 
+.integration-status {
+  min-height: 36px;
+  padding: 8px 11px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.integration-status.connected {
+  border-color: rgba(35, 122, 75, 0.35);
+  background: rgba(35, 122, 75, 0.08);
+  color: var(--green);
+}
+
+.integration-status.disconnected {
+  color: var(--muted);
+}
+
+.integration-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: white;
+}
+
+.integration-summary > div {
+  min-width: 0;
+  padding: 18px 20px;
+  display: grid;
+  gap: 5px;
+  border-right: 1px solid var(--border);
+}
+
+.integration-summary > div:last-child {
+  border-right: 0;
+}
+
+.integration-summary span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.integration-actions {
+  margin-top: 16px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.integration-actions form {
+  margin: 0;
+}
+
+.button.disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.notice {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: white;
+}
+
+.notice.success {
+  border-color: rgba(35, 122, 75, 0.35);
+  color: var(--green);
+}
+
+.notice.error {
+  border-color: rgba(180, 49, 60, 0.35);
+  color: var(--red);
+}
+
+.technical-details {
+  margin-top: 24px;
+  padding: 14px 16px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.technical-details summary {
+  cursor: pointer;
+  color: var(--foreground);
+  font-weight: 700;
+}
+
 @media (max-width: 1180px) {
   .grid-4 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -554,6 +652,19 @@ textarea {
 
   .page-header {
     display: grid;
+  }
+
+  .integration-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .integration-summary > div {
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .integration-summary > div:last-child {
+    border-bottom: 0;
   }
 }
 
