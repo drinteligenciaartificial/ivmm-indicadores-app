@@ -242,7 +242,13 @@ export async function importMonthlyResults(formData: FormData) {
   const user = await requireWriteAccess();
   const file = formData.get("file");
   if (!(file instanceof File)) redirect("/lancamentos?erro=arquivo");
-  const text = await file.text();
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let text: string;
+  try {
+    text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    text = new TextDecoder("windows-1252").decode(bytes);
+  }
   const parsed = normalizeImportedRows(parseResultCsv(text), value(formData, "fallbackCode"));
   const codes = [...new Set(parsed.rows.map((row) => row.code))];
   const indicators = await prisma.indicator.findMany({ where: { code: { in: codes } }, include: { goals: true } });
