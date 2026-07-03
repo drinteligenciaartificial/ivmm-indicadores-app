@@ -55,6 +55,46 @@ function indicatorData(formData: FormData) {
   };
 }
 
+async function synchronizeIndicatorGoals(indicatorId: string) {
+  const indicator = await prisma.indicator.findUnique({
+    where: { id: indicatorId },
+    include: { goals: true, results: true },
+  });
+  if (!indicator) return 0;
+
+  let updated = 0;
+  for (const result of indicator.results) {
+    const year = result.referenceDate.getUTCFullYear();
+    const month = result.referenceDate.getUTCMonth() + 1;
+    const quarter = Math.ceil(month / 3);
+    const goal = indicator.goals.find((item) => item.year === year && item.month === month)
+      ?? indicator.goals.find((item) => item.year === year && item.quarter === quarter && item.month == null)
+      ?? indicator.goals.find((item) => item.year === year && item.month == null && item.quarter == null);
+    if (!goal || goal.targetValue === result.targetValue) continue;
+
+    const achievement = calculateAchievement(
+      result.actualValue,
+      goal.targetValue,
+      indicator.polarity as "MAIOR_MELHOR" | "MENOR_MELHOR",
+    );
+    await prisma.result.update({
+      where: { id: result.id },
+      data: {
+        targetValue: goal.targetValue,
+        achievement,
+        trafficLight: getTrafficLight(achievement),
+      },
+    });
+    updated += 1;
+  }
+  return updated;
+}
+
+function revalidateManagementViews() {
+  ["/", "/metas", "/resultados", "/okrs", "/scorecard", "/bsc", "/head-operacoes", "/conselho"]
+    .forEach((path) => revalidatePath(path));
+}
+
 export async function login(formData: FormData) {
   const email = value(formData, "email").toLowerCase();
   const password = value(formData, "password");
@@ -181,13 +221,15 @@ export async function createGoal(formData: FormData) {
     },
     include: { indicator: true },
   });
-  await audit(user, "Meta", "CRIAR", `${goal.indicator.code} - ${goal.year}/${goal.month ?? "ano"}`, goal.id);
-  revalidatePath("/");
+  const synchronized = await synchronizeIndicatorGoals(goal.indicatorId);
+  await audit(user, "Meta", "CRIAR", `${goal.indicator.code} - ${goal.year}/${goal.month ?? "ano"}; ${synchronized} resultado(s) recalculado(s)`, goal.id);
+  revalidateManagementViews();
   redirect("/metas");
 }
 
 export async function updateGoal(id: string, formData: FormData) {
   const user = await requireWriteAccess();
+  const previous = await prisma.goal.findUniqueOrThrow({ where: { id }, select: { indicatorId: true } });
   const goal = await prisma.goal.update({
     where: { id },
     data: {
@@ -202,16 +244,20 @@ export async function updateGoal(id: string, formData: FormData) {
     },
     include: { indicator: true },
   });
-  await audit(user, "Meta", "EDITAR", `${goal.indicator.code} - ${goal.year}/${goal.month ?? "ano"}`, goal.id);
-  revalidatePath("/");
+  const indicatorIds = [...new Set([previous.indicatorId, goal.indicatorId])];
+  let synchronized = 0;
+  for (const indicatorId of indicatorIds) synchronized += await synchronizeIndicatorGoals(indicatorId);
+  await audit(user, "Meta", "EDITAR", `${goal.indicator.code} - ${goal.year}/${goal.month ?? "ano"}; ${synchronized} resultado(s) recalculado(s)`, goal.id);
+  revalidateManagementViews();
   redirect("/metas");
 }
 
 export async function deleteGoal(id: string) {
   const user = await requireWriteAccess();
-  await prisma.goal.delete({ where: { id } });
-  await audit(user, "Meta", "EXCLUIR", `Meta removida`, id);
-  revalidatePath("/");
+  const goal = await prisma.goal.delete({ where: { id }, select: { indicatorId: true } });
+  const synchronized = await synchronizeIndicatorGoals(goal.indicatorId);
+  await audit(user, "Meta", "EXCLUIR", `Meta removida; ${synchronized} resultado(s) recalculado(s)`, id);
+  revalidateManagementViews();
   redirect("/metas");
 }
 
