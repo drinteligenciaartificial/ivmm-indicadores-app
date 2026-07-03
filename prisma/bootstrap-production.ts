@@ -1,7 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { hashPassword } from "../lib/password.ts";
 import { loadOfficialData } from "./official-data.ts";
-import { calculateAchievement, getTrafficLight } from "../lib/kpi.ts";
 
 const prisma = new PrismaClient();
 const allPermissions = ["dashboard", "indicadores", "metas", "resultados", "lancamentos", "scorecard", "bsc", "okrs", "head-operacoes", "conselho", "ia-automacao", "historico", "exportacoes", "usuarios"];
@@ -33,33 +32,6 @@ function requiredEnvironment(name: string) {
   const input = process.env[name]?.trim();
   if (!input) throw new Error(`${name} deve ser configurado no Render.`);
   return input;
-}
-
-async function reconcileGoalsAndResults() {
-  const indicators = await prisma.indicator.findMany({ include: { goals: true, results: true } });
-  let updated = 0;
-  for (const indicator of indicators) {
-    for (const result of indicator.results) {
-      const year = result.referenceDate.getUTCFullYear();
-      const month = result.referenceDate.getUTCMonth() + 1;
-      const quarter = Math.ceil(month / 3);
-      const goal = indicator.goals.find((item) => item.year === year && item.month === month)
-        ?? indicator.goals.find((item) => item.year === year && item.quarter === quarter && item.month == null)
-        ?? indicator.goals.find((item) => item.year === year && item.month == null && item.quarter == null);
-      if (!goal || goal.targetValue === result.targetValue) continue;
-      const achievement = calculateAchievement(
-        result.actualValue,
-        goal.targetValue,
-        indicator.polarity as "MAIOR_MELHOR" | "MENOR_MELHOR",
-      );
-      await prisma.result.update({
-        where: { id: result.id },
-        data: { targetValue: goal.targetValue, achievement, trafficLight: getTrafficLight(achievement) },
-      });
-      updated += 1;
-    }
-  }
-  if (updated) console.log(`${updated} resultado(s) reconciliado(s) com as metas vigentes.`);
 }
 
 async function main() {
@@ -141,7 +113,6 @@ async function main() {
     await loadOfficialData(prisma, { name: "Bootstrap Render", role: "SISTEMA" });
   }
 
-  await reconcileGoalsAndResults();
 }
 
 main()
