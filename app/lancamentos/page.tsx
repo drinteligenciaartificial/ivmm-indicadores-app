@@ -17,7 +17,7 @@ export default async function MonthlyLaunchPage({ searchParams }: { searchParams
           <p>A coleta de dados é responsabilidade da Coordenação Administrativa. Você pode lançar manualmente ou importar uma planilha modelo.</p>
         </div>
       </section>
-      {params.importados && <div className="notice success"><strong>{params.importados} resultado(s) processado(s).</strong> {params.novos} novo(s), {params.atualizados} atualizado(s) e {params.ignorados} ignorado(s).{params.inicio && params.fim ? ` Período: ${params.inicio} a ${params.fim}.` : ""}</div>}
+      {params.importados && <div className="notice success"><strong>{params.importados} resultado(s) processado(s).</strong> {params.novos} novo(s), {params.atualizados} atualizado(s), {params.duplicados ?? 0} duplicado(s) removido(s) e {params.ignorados} ignorado(s).{params.inicio && params.fim ? ` Período: ${params.inicio} a ${params.fim}.` : ""}</div>}
       {params.erro === "arquivo" && <p style={{ color: "var(--red)" }}>Selecione um arquivo CSV para importar.</p>}
       <section className="grid grid-2">
         <div>
