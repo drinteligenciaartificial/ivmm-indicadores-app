@@ -10,18 +10,17 @@ export async function GET(request: Request) {
   if (!canAccess(user, "lancamentos")) return new Response("Acesso negado", { status: 403 });
   const url = new URL(request.url);
   const indicatorId = url.searchParams.get("indicatorId") || "";
-  const indicator = indicatorId ? await prisma.indicator.findUnique({ where: { id: indicatorId }, include: { goals: { orderBy: [{ year: "desc" }, { month: "desc" }], take: 1 } } }) : null;
+  const indicator = indicatorId ? await prisma.indicator.findUnique({ where: { id: indicatorId }, include: { goals: true } }) : null;
   const header = ["codigo_indicador", "ano", "mes", "resultado", "meta", "analise", "plano_acao"];
-  const sample = [
-    indicator?.code ?? "CODIGO-001",
-    new Date().getFullYear(),
-    new Date().getMonth() + 1,
-    "",
-    indicator?.goals[0]?.targetValue ?? "",
-    "",
-    "",
-  ];
-  const csv = [header, sample].map((row) => row.map(csvCell).join(";")).join("\n");
+  const currentYear = new Date().getFullYear();
+  const samples = Array.from({ length: 12 }, (_, index) => {
+    const month = index + 1;
+    const goal = indicator?.goals.find((item) => item.year === currentYear && item.month === month)
+      ?? indicator?.goals.find((item) => item.year === currentYear && item.quarter === Math.ceil(month / 3) && item.month == null)
+      ?? indicator?.goals.find((item) => item.year === currentYear && item.month == null && item.quarter == null);
+    return [indicator?.code ?? "CODIGO-001", currentYear, month, "", goal?.targetValue ?? "", "", ""];
+  });
+  const csv = [header, ...samples].map((row) => row.map(csvCell).join(";")).join("\n");
   return new Response(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
