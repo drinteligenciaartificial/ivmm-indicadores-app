@@ -1,5 +1,6 @@
 import { canAccess, getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { brasiliaYear } from "@/lib/time";
 
 function csvCell(value: unknown) {
   return `"${String(value ?? "").replace(/"/g, '""')}"`;
@@ -12,7 +13,7 @@ export async function GET(request: Request) {
   const indicatorId = url.searchParams.get("indicatorId") || "";
   const indicator = indicatorId ? await prisma.indicator.findUnique({ where: { id: indicatorId }, include: { goals: true } }) : null;
   const header = ["codigo_indicador", "ano", "mes", "resultado", "meta", "analise", "plano_acao"];
-  const currentYear = new Date().getFullYear();
+  const currentYear = brasiliaYear();
   const samples = Array.from({ length: 12 }, (_, index) => {
     const month = index + 1;
     const goal = indicator?.goals.find((item) => item.year === currentYear && item.month === month)
