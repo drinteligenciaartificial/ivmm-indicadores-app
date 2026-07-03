@@ -414,6 +414,35 @@ textarea {
   border-top: 3px solid var(--bronze);
 }
 
+.dashboard-filters {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  column-gap: 16px;
+  row-gap: 20px;
+  padding: 24px;
+}
+
+.dashboard-filters label {
+  gap: 9px;
+  min-width: 0;
+  padding-top: 2px;
+  line-height: 1.35;
+}
+
+.dashboard-filters .indicator-comparison-filter {
+  grid-column: span 2;
+  grid-row: span 2;
+}
+
+.multi-select {
+  min-height: 112px;
+  padding: 6px;
+}
+
+.multi-select option {
+  padding: 7px 9px;
+  border-radius: 4px;
+}
+
 .filter-actions {
   grid-column: 1 / -1;
   display: flex;
@@ -628,6 +657,10 @@ textarea {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
+  .dashboard-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .permission-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -662,6 +695,10 @@ textarea {
   .filters,
   .permission-grid {
     grid-template-columns: 1fr;
+  }
+
+  .dashboard-filters .indicator-comparison-filter {
+    grid-column: 1 / -1;
   }
 
   .page-header {
