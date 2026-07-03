@@ -1,6 +1,6 @@
 import { KpiCard } from "@/components/KpiCard";
 import { TrafficBadge } from "@/components/TrafficBadge";
-import { AreaBarChart, PeriodLineChart, TrafficPieChart } from "@/components/DashboardCharts";
+import { IndicatorColumnChart, PeriodLineChart, TrafficPieChart } from "@/components/DashboardCharts";
 import { DashboardImageExport } from "@/components/DashboardImageExport";
 import { requireFeature } from "@/lib/auth";
 import { areas, statuses, trafficLights } from "@/lib/constants";
@@ -11,6 +11,11 @@ import { LayoutDashboard } from "lucide-react";
 function param(searchParams: Record<string, string | string[] | undefined>, key: string) {
   const value = searchParams[key];
   return Array.isArray(value) ? value[0] : value || "";
+}
+
+function paramsList(searchParams: Record<string, string | string[] | undefined>, key: string) {
+  const value = searchParams[key];
+  return Array.isArray(value) ? value.filter(Boolean) : value ? [value] : [];
 }
 
 function monthKey(date: Date) {
@@ -27,8 +32,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const params = await searchParams;
   const filters = {
     status: param(params, "status"),
-    indicatorId: param(params, "indicatorId"),
+    indicatorIds: paramsList(params, "indicatorIds"),
     area: param(params, "area"),
+    year: param(params, "year"),
+    quarter: param(params, "quarter"),
     periodStart: param(params, "periodStart"),
     periodEnd: param(params, "periodEnd"),
     traffic: param(params, "traffic"),
@@ -38,7 +45,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const indicators = await prisma.indicator.findMany({
     where: {
       ...(filters.status ? { status: filters.status } : {}),
-      ...(filters.indicatorId ? { id: filters.indicatorId } : {}),
+      ...(filters.indicatorIds.length ? { id: { in: filters.indicatorIds } } : {}),
       ...(filters.area ? { area: filters.area } : {}),
     },
     orderBy: { code: "asc" },
@@ -48,6 +55,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const records = indicators.flatMap((indicator) => indicator.results
     .filter((result) => {
       const period = monthKey(result.referenceDate);
+      if (filters.year && result.referenceDate.getUTCFullYear() !== Number(filters.year)) return false;
+      if (filters.quarter && Math.ceil((result.referenceDate.getUTCMonth() + 1) / 3) !== Number(filters.quarter)) return false;
       if (filters.periodStart && period < filters.periodStart) return false;
       if (filters.periodEnd && period > filters.periodEnd) return false;
       if (filters.traffic && result.trafficLight !== filters.traffic) return false;
@@ -69,23 +78,33 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     value: records.filter((item) => item.result.trafficLight === name).length,
   }));
 
-  const grouped = records.reduce((acc: Record<string, { actual: number; target: number; achievement: number; count: number }>, item) => {
-    const period = monthKey(item.result.referenceDate);
-    if (!acc[period]) acc[period] = { actual: 0, target: 0, achievement: 0, count: 0 };
-    acc[period].actual += item.result.actualValue;
-    acc[period].target += item.result.targetValue;
-    acc[period].achievement += item.result.achievement;
-    acc[period].count += 1;
-    return acc;
-  }, {});
-  const singleIndicator = indicators.length === 1;
-  const periodSeries = Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([period, values]) => ({
-    period: periodLabel(period),
-    value: Number((singleIndicator ? values.actual / values.count : values.achievement / values.count).toFixed(2)),
-    target: Number((singleIndicator ? values.target / values.count : 100).toFixed(2)),
-  }));
-  const lineValueLabel = singleIndicator ? `Resultado (${indicators[0].unit})` : "Atingimento médio (%)";
-  const lineTargetLabel = singleIndicator ? `Meta (${indicators[0].unit})` : "Referência (100%)";
+  const periods = [...new Set(records.map((item) => monthKey(item.result.referenceDate)))].sort();
+  const comparisonSeries = indicators
+    .filter((indicator) => records.some((item) => item.indicator.id === indicator.id))
+    .map((indicator) => ({ key: `indicator_${indicator.id}`, label: `${indicator.code} - ${indicator.name}` }));
+  const periodSeries = periods.map((period) => {
+    const row: { period: string; reference: number } & Record<string, string | number> = { period: periodLabel(period), reference: 100 };
+    comparisonSeries.forEach((series) => {
+      const indicatorId = series.key.replace("indicator_", "");
+      const values = records.filter((item) => item.indicator.id === indicatorId && monthKey(item.result.referenceDate) === period);
+      if (values.length) row[series.key] = Number((values.reduce((sum, item) => sum + item.result.achievement, 0) / values.length).toFixed(2));
+    });
+    return row;
+  });
+  const columnMonths = periods.map((period) => ({ key: `month_${period.replace("-", "_")}`, label: periodLabel(period) }));
+  const columnData = comparisonSeries.map((series) => {
+    const indicatorId = series.key.replace("indicator_", "");
+    const row: { indicator: string } & Record<string, string | number> = { indicator: series.label.split(" - ")[0] };
+    columnMonths.forEach((month, index) => {
+      const values = records.filter((item) => item.indicator.id === indicatorId && monthKey(item.result.referenceDate) === periods[index]);
+      if (values.length) row[month.key] = Number((values.reduce((sum, item) => sum + item.result.achievement, 0) / values.length).toFixed(2));
+    });
+    return row;
+  });
+  const exportPeriodSeries = periods.map((period) => {
+    const values = records.filter((item) => monthKey(item.result.referenceDate) === period);
+    return { period: periodLabel(period), value: Number((values.reduce((sum, item) => sum + item.result.achievement, 0) / (values.length || 1)).toFixed(2)), target: 100 };
+  });
   const showLine = filters.chartMode === "COMPLETO" || filters.chartMode === "LINHA";
   const showPie = filters.chartMode === "COMPLETO" || filters.chartMode === "PIZZA";
   const showBar = filters.chartMode === "COMPLETO" || filters.chartMode === "BARRAS";
@@ -101,9 +120,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     ],
     byArea,
     traffic,
-    periodSeries,
-    lineValueLabel,
-    lineTargetLabel,
+    periodSeries: exportPeriodSeries,
+    lineValueLabel: "Atingimento médio (%)",
+    lineTargetLabel: "Referência (100%)",
     rows: sortedRecords.map(({ indicator, result }) => ({
       reference: monthKey(result.referenceDate),
       code: indicator.code,
@@ -124,12 +143,14 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       </section>
       <form className="card filters dashboard-filters">
         <label>Status<select className="select" name="status" defaultValue={filters.status}><option value="">Todos</option>{statuses.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-        <label>Indicador<select className="select" name="indicatorId" defaultValue={filters.indicatorId}><option value="">Todos</option>{allIndicators.map((indicator) => <option key={indicator.id} value={indicator.id}>{indicator.code} - {indicator.name}</option>)}</select></label>
+        <label className="indicator-comparison-filter">Indicadores para comparar<select className="select multi-select" name="indicatorIds" multiple size={5} defaultValue={filters.indicatorIds}>{allIndicators.map((indicator) => <option key={indicator.id} value={indicator.id}>{indicator.code} - {indicator.name}</option>)}</select></label>
         <label>Área<select className="select" name="area" defaultValue={filters.area}><option value="">Todas</option>{areas.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+        <label>Ano<input className="input" name="year" type="number" min="2020" max="2100" defaultValue={filters.year} /></label>
+        <label>Trimestre<select className="select" name="quarter" defaultValue={filters.quarter}><option value="">Todos</option><option value="1">1º trimestre</option><option value="2">2º trimestre</option><option value="3">3º trimestre</option><option value="4">4º trimestre</option></select></label>
         <label>Período inicial<input className="input" name="periodStart" type="month" defaultValue={filters.periodStart} /></label>
         <label>Período final<input className="input" name="periodEnd" type="month" defaultValue={filters.periodEnd} /></label>
         <label>Semáforo<select className="select" name="traffic" defaultValue={filters.traffic}><option value="">Todos</option>{trafficLights.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-        <label>Apresentação<select className="select" name="chartMode" defaultValue={filters.chartMode}><option value="COMPLETO">Painel completo</option><option value="LINHA">Evolução em linha</option><option value="PIZZA">Distribuição em pizza</option><option value="BARRAS">Comparação por área</option></select></label>
+        <label>Apresentação<select className="select" name="chartMode" defaultValue={filters.chartMode}><option value="COMPLETO">Painel completo</option><option value="LINHA">Comparação em linhas</option><option value="PIZZA">Distribuição em pizza</option><option value="BARRAS">Atingimento em colunas</option></select></label>
         <div className="filter-actions"><button className="button" type="submit"><LayoutDashboard aria-hidden="true" size={18} />Gerar dashboard</button></div>
       </form>
       <section id="dashboard-export-area" className="dashboard-export-area" style={{ marginTop: 18 }}>
@@ -139,9 +160,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           <KpiCard label="Atingimento médio" value={`${avg.toFixed(1)}%`} />
           <KpiCard label="Resultados críticos" value={critical} />
         </section>
-        {showLine && <section className="card" style={{ marginTop: 18 }}><h3>Evolução no período</h3><PeriodLineChart data={periodSeries} valueLabel={lineValueLabel} targetLabel={lineTargetLabel} /></section>}
+        {showLine && <section className="card" style={{ marginTop: 18 }}><h3>Comparação da evolução dos indicadores</h3><PeriodLineChart data={periodSeries} series={comparisonSeries} /></section>}
         {(showBar || showPie) && <section className={`grid ${showBar && showPie ? "grid-2" : ""}`} style={{ marginTop: 18 }}>
-          {showBar && <div className="card"><h3>Atingimento por área</h3><AreaBarChart data={byArea} /></div>}
+          {showBar && <div className="card"><h3>Atingimento mensal por indicador</h3><IndicatorColumnChart data={columnData} months={columnMonths} /></div>}
           {showPie && <div className="card"><h3>Distribuição dos resultados</h3><TrafficPieChart data={traffic} /></div>}
         </section>}
         <section className="card" style={{ marginTop: 18 }}>
