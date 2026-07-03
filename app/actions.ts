@@ -249,6 +249,7 @@ export async function importMonthlyResults(formData: FormData) {
   const byCode = new Map(indicators.map((indicator) => [indicator.code, indicator]));
   let created = 0;
   let updated = 0;
+  let deduplicated = 0;
   let skipped = parsed.rejected.length;
   const periods: Date[] = [];
   for (const row of parsed.rows) {
@@ -262,7 +263,7 @@ export async function importMonthlyResults(formData: FormData) {
     const targetValue = row.targetValue ?? goal?.targetValue;
     if (targetValue == null || !Number.isFinite(targetValue)) { skipped += 1; continue; }
     const achievement = calculateAchievement(row.actualValue, targetValue, indicator.polarity as "MAIOR_MELHOR" | "MENOR_MELHOR");
-    const existing = await prisma.result.findFirst({ where: { indicatorId: indicator.id, referenceDate } });
+    const existing = await prisma.result.findMany({ where: { indicatorId: indicator.id, referenceDate }, orderBy: { createdAt: "asc" } });
     const data = {
       indicatorId: indicator.id,
       referenceDate,
@@ -273,8 +274,13 @@ export async function importMonthlyResults(formData: FormData) {
       analysis: row.analysis || "Importado por planilha.",
       actionPlan: row.actionPlan,
     };
-    if (existing) {
-      await prisma.result.update({ where: { id: existing.id }, data });
+    if (existing.length) {
+      await prisma.result.update({ where: { id: existing[0].id }, data });
+      if (existing.length > 1) {
+        const duplicates = existing.slice(1).map((item) => item.id);
+        await prisma.result.deleteMany({ where: { id: { in: duplicates } } });
+        deduplicated += duplicates.length;
+      }
       updated += 1;
     } else {
       await prisma.result.create({ data });
@@ -286,10 +292,10 @@ export async function importMonthlyResults(formData: FormData) {
   const range = periods.length
     ? `${periods.sort((a, b) => a.getTime() - b.getTime())[0].toISOString().slice(0, 7)} a ${periods[periods.length - 1].toISOString().slice(0, 7)}`
     : "sem período válido";
-  await audit(user, "Resultado", "IMPORTAR", `${imported} resultado(s): ${created} novo(s), ${updated} atualizado(s), ${skipped} ignorado(s); período ${range}; arquivo ${file.name}`);
+  await audit(user, "Resultado", "IMPORTAR", `${imported} resultado(s): ${created} novo(s), ${updated} atualizado(s), ${deduplicated} duplicado(s) removido(s), ${skipped} ignorado(s); período ${range}; arquivo ${file.name}`);
   revalidatePath("/");
   revalidatePath("/resultados");
-  redirect(`/lancamentos?importados=${imported}&novos=${created}&atualizados=${updated}&ignorados=${skipped}&inicio=${periods[0]?.toISOString().slice(0, 7) ?? ""}&fim=${periods[periods.length - 1]?.toISOString().slice(0, 7) ?? ""}`);
+  redirect(`/lancamentos?importados=${imported}&novos=${created}&atualizados=${updated}&duplicados=${deduplicated}&ignorados=${skipped}&inicio=${periods[0]?.toISOString().slice(0, 7) ?? ""}&fim=${periods[periods.length - 1]?.toISOString().slice(0, 7) ?? ""}`);
 }
 
 export async function updateResult(id: string, formData: FormData) {
