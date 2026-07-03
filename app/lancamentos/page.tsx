@@ -17,7 +17,7 @@ export default async function MonthlyLaunchPage({ searchParams }: { searchParams
           <p>A coleta de dados é responsabilidade da Coordenação Administrativa. Você pode lançar manualmente ou importar uma planilha modelo.</p>
         </div>
       </section>
-      {params.importados && <p style={{ color: "var(--green)" }}>{params.importados} resultado(s) importado(s) com sucesso.</p>}
+      {params.importados && <div className="notice success"><strong>{params.importados} resultado(s) processado(s).</strong> {params.novos} novo(s), {params.atualizados} atualizado(s) e {params.ignorados} ignorado(s).{params.inicio && params.fim ? ` Período: ${params.inicio} a ${params.fim}.` : ""}</div>}
       {params.erro === "arquivo" && <p style={{ color: "var(--red)" }}>Selecione um arquivo CSV para importar.</p>}
       <section className="grid grid-2">
         <div>
@@ -25,7 +25,7 @@ export default async function MonthlyLaunchPage({ searchParams }: { searchParams
         </div>
         <div className="card form">
           <h3>Importação por planilha</h3>
-          <p className="muted">Escolha o indicador, baixe o modelo, preencha no Excel e importe o CSV preenchido.</p>
+          <p className="muted">Escolha o indicador, baixe o modelo, preencha todos os meses necessários no Excel e importe o CSV. Cada linha ou coluna de competência será processada no seu próprio período.</p>
           <form className="form">
             <label>Indicador para modelo
               <select className="select" name="indicatorId" defaultValue={selectedIndicator}>
@@ -36,12 +36,14 @@ export default async function MonthlyLaunchPage({ searchParams }: { searchParams
           </form>
           <Link className="button" href={`/lancamentos/modelo?indicatorId=${selectedIndicator}`}>Exportar modelo de planilha</Link>
           <form action={importMonthlyResults} className="form">
+            <input name="fallbackCode" type="hidden" value={indicators.find((indicator) => indicator.id === selectedIndicator)?.code ?? ""} />
             <label>Arquivo preenchido<input className="input" name="file" type="file" accept=".csv,text/csv" required /></label>
             <button className="button" type="submit">Solicitar importação de dados</button>
           </form>
-          <div className="card">
+          <div className="import-help">
             <h3>Colunas esperadas</h3>
-            <p className="muted">codigo_indicador, ano, mes, resultado, meta, analise, plano_acao</p>
+            <p className="muted">Formato por linha: codigo_indicador, ano, mes, resultado, meta, analise, plano_acao.</p>
+            <p className="muted">Também são aceitas competência/data (ex.: 03/2026) ou colunas mensais (ex.: jan_2026, fev_2026).</p>
           </div>
         </div>
       </section>

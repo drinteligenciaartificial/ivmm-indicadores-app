@@ -605,6 +605,20 @@ textarea {
   font-weight: 700;
 }
 
+.import-help {
+  padding: 14px 0 0;
+  border-top: 1px solid var(--border);
+}
+
+.import-help h3 {
+  margin-bottom: 8px;
+  font-size: 15px;
+}
+
+.import-help p {
+  margin: 5px 0;
+}
+
 @media (max-width: 1180px) {
   .grid-4 {
     grid-template-columns: repeat(2, minmax(0, 1fr));

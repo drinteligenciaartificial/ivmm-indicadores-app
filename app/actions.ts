@@ -11,6 +11,7 @@ import { calculateAchievement, getTrafficLight } from "@/lib/kpi";
 import { COLLECTION_OWNER } from "@/lib/constants";
 import { hashPassword, passwordNeedsUpgrade, verifyPassword } from "@/lib/password";
 import { createSessionToken, SESSION_COOKIE, sessionCookieOptions } from "@/lib/session";
+import { normalizeImportedRows, parseResultCsv } from "@/lib/result-import";
 
 function indicatorData(formData: FormData) {
   return {
@@ -237,51 +238,58 @@ export async function createResult(formData: FormData) {
   redirect("/resultados");
 }
 
-function parseDelimited(text: string) {
-  const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-  if (lines.length < 2) return [];
-  const delimiter = lines[0].includes(";") ? ";" : lines[0].includes("\t") ? "\t" : ",";
-  const headers = lines[0].split(delimiter).map((header) => header.trim().replace(/^"|"$/g, ""));
-  return lines.slice(1).map((line) => {
-    const columns = line.split(delimiter).map((column) => column.trim().replace(/^"|"$/g, ""));
-    return Object.fromEntries(headers.map((header, index) => [header, columns[index] ?? ""]));
-  });
-}
-
 export async function importMonthlyResults(formData: FormData) {
   const user = await requireWriteAccess();
   const file = formData.get("file");
   if (!(file instanceof File)) redirect("/lancamentos?erro=arquivo");
   const text = await file.text();
-  const rows = parseDelimited(text);
-  let imported = 0;
-  for (const row of rows) {
-    const code = row.codigo_indicador || row.codigo || row.indicador;
-    const indicator = await prisma.indicator.findFirst({ where: { code }, include: { goals: { orderBy: [{ year: "desc" }, { month: "desc" }], take: 1 } } });
-    if (!indicator) continue;
-    const year = Number(row.ano);
-    const month = Number(row.mes);
-    const actualValue = Number(String(row.resultado ?? "").replace(",", "."));
-    const targetValue = Number(String(row.meta || indicator.goals[0]?.targetValue || 0).replace(",", "."));
-    if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(actualValue) || !Number.isFinite(targetValue)) continue;
-    const achievement = calculateAchievement(actualValue, targetValue, indicator.polarity as "MAIOR_MELHOR" | "MENOR_MELHOR");
-    await prisma.result.create({
-      data: {
-        indicatorId: indicator.id,
-        referenceDate: new Date(`${year}-${String(month).padStart(2, "0")}-01T00:00:00.000Z`),
-        actualValue,
-        targetValue,
-        achievement,
-        trafficLight: getTrafficLight(achievement),
-        analysis: row.analise || "Importado por planilha.",
-        actionPlan: row.plano_acao || null,
-      },
-    });
-    imported++;
+  const parsed = normalizeImportedRows(parseResultCsv(text), value(formData, "fallbackCode"));
+  const codes = [...new Set(parsed.rows.map((row) => row.code))];
+  const indicators = await prisma.indicator.findMany({ where: { code: { in: codes } }, include: { goals: true } });
+  const byCode = new Map(indicators.map((indicator) => [indicator.code, indicator]));
+  let created = 0;
+  let updated = 0;
+  let skipped = parsed.rejected.length;
+  const periods: Date[] = [];
+  for (const row of parsed.rows) {
+    const indicator = byCode.get(row.code);
+    if (!indicator) { skipped += 1; continue; }
+    const referenceDate = new Date(Date.UTC(row.year, row.month - 1, 1));
+    const goal = indicator.goals.find((item) => item.year === row.year && item.month === row.month)
+      ?? indicator.goals.find((item) => item.year === row.year && item.quarter === Math.ceil(row.month / 3) && item.month == null)
+      ?? indicator.goals.find((item) => item.year === row.year && item.month == null && item.quarter == null)
+      ?? [...indicator.goals].sort((a, b) => b.year - a.year || (b.month ?? 0) - (a.month ?? 0))[0];
+    const targetValue = row.targetValue ?? goal?.targetValue;
+    if (targetValue == null || !Number.isFinite(targetValue)) { skipped += 1; continue; }
+    const achievement = calculateAchievement(row.actualValue, targetValue, indicator.polarity as "MAIOR_MELHOR" | "MENOR_MELHOR");
+    const existing = await prisma.result.findFirst({ where: { indicatorId: indicator.id, referenceDate } });
+    const data = {
+      indicatorId: indicator.id,
+      referenceDate,
+      actualValue: row.actualValue,
+      targetValue,
+      achievement,
+      trafficLight: getTrafficLight(achievement),
+      analysis: row.analysis || "Importado por planilha.",
+      actionPlan: row.actionPlan,
+    };
+    if (existing) {
+      await prisma.result.update({ where: { id: existing.id }, data });
+      updated += 1;
+    } else {
+      await prisma.result.create({ data });
+      created += 1;
+    }
+    periods.push(referenceDate);
   }
-  await audit(user, "Resultado", "IMPORTAR", `${imported} resultado(s) importado(s) por planilha`);
+  const imported = created + updated;
+  const range = periods.length
+    ? `${periods.sort((a, b) => a.getTime() - b.getTime())[0].toISOString().slice(0, 7)} a ${periods[periods.length - 1].toISOString().slice(0, 7)}`
+    : "sem período válido";
+  await audit(user, "Resultado", "IMPORTAR", `${imported} resultado(s): ${created} novo(s), ${updated} atualizado(s), ${skipped} ignorado(s); período ${range}; arquivo ${file.name}`);
   revalidatePath("/");
-  redirect(`/lancamentos?importados=${imported}`);
+  revalidatePath("/resultados");
+  redirect(`/lancamentos?importados=${imported}&novos=${created}&atualizados=${updated}&ignorados=${skipped}&inicio=${periods[0]?.toISOString().slice(0, 7) ?? ""}&fim=${periods[periods.length - 1]?.toISOString().slice(0, 7) ?? ""}`);
 }
 
 export async function updateResult(id: string, formData: FormData) {
