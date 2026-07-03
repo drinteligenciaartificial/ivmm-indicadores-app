@@ -55,6 +55,13 @@ function indicatorData(formData: FormData) {
   };
 }
 
+function goalForPeriod<T extends { year: number; quarter: number | null; month: number | null; targetValue: number }>(goals: T[], year: number, month: number) {
+  const quarter = Math.ceil(month / 3);
+  return goals.find((item) => item.year === year && item.month === month)
+    ?? goals.find((item) => item.year === year && item.quarter === quarter && item.month == null)
+    ?? goals.find((item) => item.year === year && item.month == null && item.quarter == null);
+}
+
 async function synchronizeIndicatorGoals(indicatorId: string) {
   const indicator = await prisma.indicator.findUnique({
     where: { id: indicatorId },
@@ -66,10 +73,7 @@ async function synchronizeIndicatorGoals(indicatorId: string) {
   for (const result of indicator.results) {
     const year = result.referenceDate.getUTCFullYear();
     const month = result.referenceDate.getUTCMonth() + 1;
-    const quarter = Math.ceil(month / 3);
-    const goal = indicator.goals.find((item) => item.year === year && item.month === month)
-      ?? indicator.goals.find((item) => item.year === year && item.quarter === quarter && item.month == null)
-      ?? indicator.goals.find((item) => item.year === year && item.month == null && item.quarter == null);
+    const goal = goalForPeriod(indicator.goals, year, month);
     if (!goal || goal.targetValue === result.targetValue) continue;
 
     const achievement = calculateAchievement(
@@ -263,14 +267,16 @@ export async function deleteGoal(id: string) {
 
 export async function createResult(formData: FormData) {
   const user = await requireWriteAccess();
-  const indicator = await prisma.indicator.findUniqueOrThrow({ where: { id: value(formData, "indicatorId") } });
+  const indicator = await prisma.indicator.findUniqueOrThrow({ where: { id: value(formData, "indicatorId") }, include: { goals: true } });
+  const year = numberValue(formData, "year");
+  const month = numberValue(formData, "month");
   const actualValue = numberValue(formData, "actualValue");
-  const targetValue = numberValue(formData, "targetValue");
+  const targetValue = goalForPeriod(indicator.goals, year, month)?.targetValue ?? numberValue(formData, "targetValue");
   const achievement = calculateAchievement(actualValue, targetValue, indicator.polarity as "MAIOR_MELHOR" | "MENOR_MELHOR");
   const result = await prisma.result.create({
     data: {
       indicatorId: indicator.id,
-      referenceDate: new Date(`${value(formData, "year")}-${value(formData, "month").padStart(2, "0")}-01T00:00:00.000Z`),
+      referenceDate: new Date(Date.UTC(year, month - 1, 1)),
       actualValue,
       targetValue,
       achievement,
@@ -308,11 +314,9 @@ export async function importMonthlyResults(formData: FormData) {
     const indicator = byCode.get(row.code);
     if (!indicator) { skipped += 1; continue; }
     const referenceDate = new Date(Date.UTC(row.year, row.month - 1, 1));
-    const goal = indicator.goals.find((item) => item.year === row.year && item.month === row.month)
-      ?? indicator.goals.find((item) => item.year === row.year && item.quarter === Math.ceil(row.month / 3) && item.month == null)
-      ?? indicator.goals.find((item) => item.year === row.year && item.month == null && item.quarter == null)
+    const goal = goalForPeriod(indicator.goals, row.year, row.month)
       ?? [...indicator.goals].sort((a, b) => b.year - a.year || (b.month ?? 0) - (a.month ?? 0))[0];
-    const targetValue = row.targetValue ?? goal?.targetValue;
+    const targetValue = goal?.targetValue ?? row.targetValue;
     if (targetValue == null || !Number.isFinite(targetValue)) { skipped += 1; continue; }
     const achievement = calculateAchievement(row.actualValue, targetValue, indicator.polarity as "MAIOR_MELHOR" | "MENOR_MELHOR");
     const existing = await prisma.result.findMany({ where: { indicatorId: indicator.id, referenceDate }, orderBy: { createdAt: "asc" } });
@@ -352,15 +356,17 @@ export async function importMonthlyResults(formData: FormData) {
 
 export async function updateResult(id: string, formData: FormData) {
   const user = await requireWriteAccess();
-  const indicator = await prisma.indicator.findUniqueOrThrow({ where: { id: value(formData, "indicatorId") } });
+  const indicator = await prisma.indicator.findUniqueOrThrow({ where: { id: value(formData, "indicatorId") }, include: { goals: true } });
+  const year = numberValue(formData, "year");
+  const month = numberValue(formData, "month");
   const actualValue = numberValue(formData, "actualValue");
-  const targetValue = numberValue(formData, "targetValue");
+  const targetValue = goalForPeriod(indicator.goals, year, month)?.targetValue ?? numberValue(formData, "targetValue");
   const achievement = calculateAchievement(actualValue, targetValue, indicator.polarity as "MAIOR_MELHOR" | "MENOR_MELHOR");
   const result = await prisma.result.update({
     where: { id },
     data: {
       indicatorId: indicator.id,
-      referenceDate: new Date(`${value(formData, "year")}-${value(formData, "month").padStart(2, "0")}-01T00:00:00.000Z`),
+      referenceDate: new Date(Date.UTC(year, month - 1, 1)),
       actualValue,
       targetValue,
       achievement,
