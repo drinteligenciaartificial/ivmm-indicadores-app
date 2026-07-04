@@ -13,11 +13,6 @@ function param(searchParams: Record<string, string | string[] | undefined>, key:
   return Array.isArray(value) ? value[0] : value || "";
 }
 
-function paramsList(searchParams: Record<string, string | string[] | undefined>, key: string) {
-  const value = searchParams[key];
-  return Array.isArray(value) ? value.filter(Boolean) : value ? [value] : [];
-}
-
 function monthKey(date: Date) {
   return date.toISOString().slice(0, 7);
 }
@@ -30,9 +25,16 @@ function periodLabel(period: string) {
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   await requireFeature("dashboard");
   const params = await searchParams;
+  const indicatorIds = [...new Set([
+    param(params, "indicator1"),
+    param(params, "indicator2"),
+    param(params, "indicator3"),
+  ].filter(Boolean))];
   const filters = {
     status: param(params, "status"),
-    indicatorIds: paramsList(params, "indicatorIds"),
+    indicator1: param(params, "indicator1"),
+    indicator2: param(params, "indicator2"),
+    indicator3: param(params, "indicator3"),
     area: param(params, "area"),
     year: param(params, "year"),
     quarter: param(params, "quarter"),
@@ -45,7 +47,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const indicators = await prisma.indicator.findMany({
     where: {
       ...(filters.status ? { status: filters.status } : {}),
-      ...(filters.indicatorIds.length ? { id: { in: filters.indicatorIds } } : {}),
+      ...(indicatorIds.length ? { id: { in: indicatorIds } } : {}),
       ...(filters.area ? { area: filters.area } : {}),
     },
     orderBy: { code: "asc" },
@@ -143,7 +145,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       </section>
       <form className="card filters dashboard-filters">
         <label>Status<select className="select" name="status" defaultValue={filters.status}><option value="">Todos</option>{statuses.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-        <label className="indicator-comparison-filter">Indicadores para comparar<select className="select multi-select" name="indicatorIds" multiple size={5} defaultValue={filters.indicatorIds}>{allIndicators.map((indicator) => <option key={indicator.id} value={indicator.id}>{indicator.code} - {indicator.name}</option>)}</select></label>
+        <label>Indicador 1<select className="select" name="indicator1" defaultValue={filters.indicator1}><option value="">Todos os indicadores</option>{allIndicators.map((indicator) => <option key={indicator.id} value={indicator.id}>{indicator.code} - {indicator.name}</option>)}</select></label>
+        <label>Indicador 2<select className="select" name="indicator2" defaultValue={filters.indicator2}><option value="">Nenhum</option>{allIndicators.map((indicator) => <option key={indicator.id} value={indicator.id}>{indicator.code} - {indicator.name}</option>)}</select></label>
+        <label>Indicador 3<select className="select" name="indicator3" defaultValue={filters.indicator3}><option value="">Nenhum</option>{allIndicators.map((indicator) => <option key={indicator.id} value={indicator.id}>{indicator.code} - {indicator.name}</option>)}</select></label>
         <label>Área<select className="select" name="area" defaultValue={filters.area}><option value="">Todas</option>{areas.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
         <label>Ano<input className="input" name="year" type="number" min="2020" max="2100" defaultValue={filters.year} /></label>
         <label>Trimestre<select className="select" name="quarter" defaultValue={filters.quarter}><option value="">Todos</option><option value="1">1º trimestre</option><option value="2">2º trimestre</option><option value="3">3º trimestre</option><option value="4">4º trimestre</option></select></label>
