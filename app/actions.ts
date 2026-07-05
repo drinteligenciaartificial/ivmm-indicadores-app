@@ -302,6 +302,7 @@ export async function importMonthlyResults(formData: FormData) {
     text = new TextDecoder("windows-1252").decode(bytes);
   }
   const parsed = normalizeImportedRows(parseResultCsv(text), value(formData, "fallbackCode"));
+  const rejectionDetails = parsed.rejected.map((item) => `linha ${item.row}: ${item.reason}`);
   const codes = [...new Set(parsed.rows.map((row) => row.code))];
   const indicators = await prisma.indicator.findMany({ where: { code: { in: codes } }, include: { goals: true } });
   const byCode = new Map(indicators.map((indicator) => [indicator.code, indicator]));
@@ -312,12 +313,12 @@ export async function importMonthlyResults(formData: FormData) {
   const periods: Date[] = [];
   for (const row of parsed.rows) {
     const indicator = byCode.get(row.code);
-    if (!indicator) { skipped += 1; continue; }
+    if (!indicator) { skipped += 1; rejectionDetails.push(`linha ${row.sourceRow}: indicador ${row.code} não encontrado`); continue; }
     const referenceDate = new Date(Date.UTC(row.year, row.month - 1, 1));
     const goal = goalForPeriod(indicator.goals, row.year, row.month)
       ?? [...indicator.goals].sort((a, b) => b.year - a.year || (b.month ?? 0) - (a.month ?? 0))[0];
     const targetValue = goal?.targetValue ?? row.targetValue;
-    if (targetValue == null || !Number.isFinite(targetValue)) { skipped += 1; continue; }
+    if (targetValue == null || !Number.isFinite(targetValue)) { skipped += 1; rejectionDetails.push(`linha ${row.sourceRow}: meta não informada ou não cadastrada`); continue; }
     const achievement = calculateAchievement(row.actualValue, targetValue, indicator.polarity as "MAIOR_MELHOR" | "MENOR_MELHOR");
     const existing = await prisma.result.findMany({ where: { indicatorId: indicator.id, referenceDate }, orderBy: { createdAt: "asc" } });
     const data = {
@@ -351,7 +352,17 @@ export async function importMonthlyResults(formData: FormData) {
   await audit(user, "Resultado", "IMPORTAR", `${imported} resultado(s): ${created} novo(s), ${updated} atualizado(s), ${deduplicated} duplicado(s) removido(s), ${skipped} ignorado(s); período ${range}; arquivo ${file.name}`);
   revalidatePath("/");
   revalidatePath("/resultados");
-  redirect(`/lancamentos?importados=${imported}&novos=${created}&atualizados=${updated}&duplicados=${deduplicated}&ignorados=${skipped}&inicio=${periods[0]?.toISOString().slice(0, 7) ?? ""}&fim=${periods[periods.length - 1]?.toISOString().slice(0, 7) ?? ""}`);
+  const redirectParams = new URLSearchParams({
+    importados: String(imported),
+    novos: String(created),
+    atualizados: String(updated),
+    duplicados: String(deduplicated),
+    ignorados: String(skipped),
+    inicio: periods[0]?.toISOString().slice(0, 7) ?? "",
+    fim: periods[periods.length - 1]?.toISOString().slice(0, 7) ?? "",
+  });
+  if (rejectionDetails.length) redirectParams.set("detalhes", rejectionDetails.slice(0, 5).join("; "));
+  redirect(`/lancamentos?${redirectParams.toString()}`);
 }
 
 export async function updateResult(id: string, formData: FormData) {
