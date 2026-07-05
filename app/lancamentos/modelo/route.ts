@@ -12,16 +12,16 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const indicatorId = url.searchParams.get("indicatorId") || "";
   const indicator = indicatorId ? await prisma.indicator.findUnique({ where: { id: indicatorId }, include: { goals: true } }) : null;
-  const header = ["codigo_indicador", "ano", "mes", "resultado", "meta", "analise", "plano_acao"];
+  const header = ["codigo_indicador", "unidade", "ano", "mes", "resultado", "meta", "analise", "plano_acao"];
   const currentYear = brasiliaYear();
   const samples = Array.from({ length: 12 }, (_, index) => {
     const month = index + 1;
     const goal = indicator?.goals.find((item) => item.year === currentYear && item.month === month)
       ?? indicator?.goals.find((item) => item.year === currentYear && item.quarter === Math.ceil(month / 3) && item.month == null)
       ?? indicator?.goals.find((item) => item.year === currentYear && item.month == null && item.quarter == null);
-    return [indicator?.code ?? "CODIGO-001", currentYear, month, "", goal?.targetValue ?? "", "", ""];
+    return [indicator?.code ?? "CODIGO-001", indicator?.unit ?? "número", currentYear, month, "", goal?.targetValue ?? "", "", ""];
   });
-  const csv = [header, ...samples].map((row) => row.map(csvCell).join(";")).join("\n");
+  const csv = `\uFEFFsep=;\n${[header, ...samples].map((row) => row.map(csvCell).join(";")).join("\n")}`;
   return new Response(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
