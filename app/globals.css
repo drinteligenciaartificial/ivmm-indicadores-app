@@ -421,6 +421,10 @@ textarea {
   padding: 24px;
 }
 
+.result-filters {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .dashboard-filters label {
   gap: 9px;
   min-width: 0;
@@ -645,6 +649,10 @@ textarea {
 
   .dashboard-filters {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .result-filters {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .permission-grid {
