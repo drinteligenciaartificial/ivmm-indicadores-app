@@ -4,7 +4,7 @@ import { IndicatorColumnChart, PeriodLineChart, TrafficPieChart } from "@/compon
 import { DashboardImageExport } from "@/components/DashboardImageExport";
 import { requireFeature } from "@/lib/auth";
 import { areas, statuses, trafficLights } from "@/lib/constants";
-import { formatArea } from "@/lib/kpi";
+import { formatArea, formatIndicatorValue } from "@/lib/kpi";
 import { prisma } from "@/lib/prisma";
 import { LayoutDashboard } from "lucide-react";
 
@@ -130,8 +130,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       code: indicator.code,
       name: indicator.name,
       area: formatArea(indicator.area),
-      actual: `${result.actualValue} ${indicator.unit}`,
-      target: `${result.targetValue} ${indicator.unit}`,
+      actual: formatIndicatorValue(result.actualValue, indicator.unit),
+      target: formatIndicatorValue(result.targetValue, indicator.unit),
       achievement: `${result.achievement.toFixed(1)}%`,
       trafficLight: result.trafficLight,
     })),
@@ -173,7 +173,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           <h3>Resultados do período</h3>
           <div className="table-wrap"><table className="table">
             <thead><tr><th>Referência</th><th>Código</th><th>Indicador</th><th>Área</th><th>Resultado</th><th>Meta</th><th>Atingimento</th><th>Status</th></tr></thead>
-            <tbody>{sortedRecords.map(({ indicator, result }) => <tr key={result.id}><td>{monthKey(result.referenceDate)}</td><td>{indicator.code}</td><td>{indicator.name}</td><td>{formatArea(indicator.area)}</td><td>{result.actualValue} {indicator.unit}</td><td>{result.targetValue} {indicator.unit}</td><td>{result.achievement.toFixed(1)}%</td><td><TrafficBadge value={result.trafficLight} /></td></tr>)}</tbody>
+            <tbody>{sortedRecords.map(({ indicator, result }) => <tr key={result.id}><td>{monthKey(result.referenceDate)}</td><td>{indicator.code}</td><td>{indicator.name}</td><td>{formatArea(indicator.area)}</td><td>{formatIndicatorValue(result.actualValue, indicator.unit)}</td><td>{formatIndicatorValue(result.targetValue, indicator.unit)}</td><td>{result.achievement.toFixed(1)}%</td><td><TrafficBadge value={result.trafficLight} /></td></tr>)}</tbody>
           </table></div>
         </section>
       </section>

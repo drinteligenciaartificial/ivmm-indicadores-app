@@ -18,6 +18,7 @@ export default async function MonthlyLaunchPage({ searchParams }: { searchParams
         </div>
       </section>
       {params.importados && <div className="notice success"><strong>{params.importados} resultado(s) processado(s).</strong> {params.novos} novo(s), {params.atualizados} atualizado(s), {params.duplicados ?? 0} duplicado(s) removido(s) e {params.ignorados} ignorado(s).{params.inicio && params.fim ? ` Período: ${params.inicio} a ${params.fim}.` : ""}</div>}
+      {params.detalhes && <div className="notice error"><strong>Linhas não importadas:</strong> {params.detalhes}</div>}
       {params.erro === "arquivo" && <p style={{ color: "var(--red)" }}>Selecione um arquivo CSV para importar.</p>}
       <section className="grid grid-2">
         <div>
@@ -42,7 +43,7 @@ export default async function MonthlyLaunchPage({ searchParams }: { searchParams
           </form>
           <div className="import-help">
             <h3>Colunas esperadas</h3>
-            <p className="muted">Formato por linha: codigo_indicador, ano, mes, resultado, meta, analise, plano_acao.</p>
+            <p className="muted">Formato por linha: codigo_indicador, unidade, ano, mes, resultado, meta, analise, plano_acao.</p>
             <p className="muted">Também são aceitas competência/data (ex.: 03/2026) ou colunas mensais (ex.: jan_2026, fev_2026).</p>
           </div>
         </div>
