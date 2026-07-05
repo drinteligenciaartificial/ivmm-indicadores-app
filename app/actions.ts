@@ -74,19 +74,16 @@ async function synchronizeIndicatorGoals(indicatorId: string) {
     const year = result.referenceDate.getUTCFullYear();
     const month = result.referenceDate.getUTCMonth() + 1;
     const goal = goalForPeriod(indicator.goals, year, month);
-    if (!goal || goal.targetValue === result.targetValue) continue;
-
-    const achievement = calculateAchievement(
-      result.actualValue,
-      goal.targetValue,
-      indicator.polarity as "MAIOR_MELHOR" | "MENOR_MELHOR",
-    );
+    const targetValue = goal?.targetValue ?? 0;
+    const achievement = goal ? calculateAchievement(result.actualValue, targetValue, indicator.polarity as "MAIOR_MELHOR" | "MENOR_MELHOR") : 0;
+    const trafficLight = goal ? getTrafficLight(achievement) : "SEM_META";
+    if (targetValue === result.targetValue && achievement === result.achievement && trafficLight === result.trafficLight) continue;
     await prisma.result.update({
       where: { id: result.id },
       data: {
-        targetValue: goal.targetValue,
+        targetValue,
         achievement,
-        trafficLight: getTrafficLight(achievement),
+        trafficLight,
       },
     });
     updated += 1;
@@ -271,8 +268,9 @@ export async function createResult(formData: FormData) {
   const year = numberValue(formData, "year");
   const month = numberValue(formData, "month");
   const actualValue = numberValue(formData, "actualValue");
-  const targetValue = goalForPeriod(indicator.goals, year, month)?.targetValue ?? numberValue(formData, "targetValue");
-  const achievement = calculateAchievement(actualValue, targetValue, indicator.polarity as "MAIOR_MELHOR" | "MENOR_MELHOR");
+  const goal = goalForPeriod(indicator.goals, year, month);
+  const targetValue = goal?.targetValue ?? 0;
+  const achievement = goal ? calculateAchievement(actualValue, targetValue, indicator.polarity as "MAIOR_MELHOR" | "MENOR_MELHOR") : 0;
   const result = await prisma.result.create({
     data: {
       indicatorId: indicator.id,
@@ -280,7 +278,7 @@ export async function createResult(formData: FormData) {
       actualValue,
       targetValue,
       achievement,
-      trafficLight: getTrafficLight(achievement),
+      trafficLight: goal ? getTrafficLight(achievement) : "SEM_META",
       analysis: optionalValue(formData, "analysis"),
       actionPlan: optionalValue(formData, "actionPlan"),
     },
@@ -315,11 +313,9 @@ export async function importMonthlyResults(formData: FormData) {
     const indicator = byCode.get(row.code);
     if (!indicator) { skipped += 1; rejectionDetails.push(`linha ${row.sourceRow}: indicador ${row.code} não encontrado`); continue; }
     const referenceDate = new Date(Date.UTC(row.year, row.month - 1, 1));
-    const goal = goalForPeriod(indicator.goals, row.year, row.month)
-      ?? [...indicator.goals].sort((a, b) => b.year - a.year || (b.month ?? 0) - (a.month ?? 0))[0];
-    const targetValue = goal?.targetValue ?? row.targetValue;
-    if (targetValue == null || !Number.isFinite(targetValue)) { skipped += 1; rejectionDetails.push(`linha ${row.sourceRow}: meta não informada ou não cadastrada`); continue; }
-    const achievement = calculateAchievement(row.actualValue, targetValue, indicator.polarity as "MAIOR_MELHOR" | "MENOR_MELHOR");
+    const goal = goalForPeriod(indicator.goals, row.year, row.month);
+    const targetValue = goal?.targetValue ?? 0;
+    const achievement = goal ? calculateAchievement(row.actualValue, targetValue, indicator.polarity as "MAIOR_MELHOR" | "MENOR_MELHOR") : 0;
     const existing = await prisma.result.findMany({ where: { indicatorId: indicator.id, referenceDate }, orderBy: { createdAt: "asc" } });
     const data = {
       indicatorId: indicator.id,
@@ -327,7 +323,7 @@ export async function importMonthlyResults(formData: FormData) {
       actualValue: row.actualValue,
       targetValue,
       achievement,
-      trafficLight: getTrafficLight(achievement),
+      trafficLight: goal ? getTrafficLight(achievement) : "SEM_META",
       analysis: row.analysis || "Importado por planilha.",
       actionPlan: row.actionPlan,
     };
@@ -371,8 +367,9 @@ export async function updateResult(id: string, formData: FormData) {
   const year = numberValue(formData, "year");
   const month = numberValue(formData, "month");
   const actualValue = numberValue(formData, "actualValue");
-  const targetValue = goalForPeriod(indicator.goals, year, month)?.targetValue ?? numberValue(formData, "targetValue");
-  const achievement = calculateAchievement(actualValue, targetValue, indicator.polarity as "MAIOR_MELHOR" | "MENOR_MELHOR");
+  const goal = goalForPeriod(indicator.goals, year, month);
+  const targetValue = goal?.targetValue ?? 0;
+  const achievement = goal ? calculateAchievement(actualValue, targetValue, indicator.polarity as "MAIOR_MELHOR" | "MENOR_MELHOR") : 0;
   const result = await prisma.result.update({
     where: { id },
     data: {
@@ -381,7 +378,7 @@ export async function updateResult(id: string, formData: FormData) {
       actualValue,
       targetValue,
       achievement,
-      trafficLight: getTrafficLight(achievement),
+      trafficLight: goal ? getTrafficLight(achievement) : "SEM_META",
       analysis: optionalValue(formData, "analysis"),
       actionPlan: optionalValue(formData, "actionPlan"),
     },

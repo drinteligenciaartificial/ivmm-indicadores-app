@@ -43,7 +43,7 @@ export default async function MonthlyLaunchPage({ searchParams }: { searchParams
           </form>
           <div className="import-help">
             <h3>Colunas esperadas</h3>
-            <p className="muted">Formato por linha: codigo_indicador, unidade, ano, mes, resultado, meta, analise, plano_acao.</p>
+            <p className="muted">Formato por linha: codigo_indicador, unidade, ano, mes, resultado, analise, plano_acao.</p>
             <p className="muted">Também são aceitas competência/data (ex.: 03/2026) ou colunas mensais (ex.: jan_2026, fev_2026).</p>
           </div>
         </div>

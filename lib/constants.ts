@@ -74,6 +74,7 @@ export const trafficLights = [
   ["VERDE", "Verde"],
   ["AMARELO", "Amarelo"],
   ["VERMELHO", "Vermelho"],
+  ["SEM_META", "Sem meta"],
 ] as const;
 
 export const features = [
