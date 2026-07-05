@@ -8,7 +8,8 @@ export default async function MonthlyLaunchPage({ searchParams }: { searchParams
   await requireFeature("lancamentos");
   const params = await searchParams;
   const indicators = await prisma.indicator.findMany({ where: { status: "ATIVO" }, orderBy: { code: "asc" }, include: { goals: { orderBy: [{ year: "desc" }, { month: "desc" }], take: 1 } } });
-  const selectedIndicator = params.indicatorId || indicators[0]?.id || "";
+  const manualIndicator = params.indicatorId || indicators[0]?.id || "";
+  const modelIndicator = params.modelIndicatorId || indicators[0]?.id || "";
   return (
     <>
       <section className="page-header">
@@ -22,22 +23,21 @@ export default async function MonthlyLaunchPage({ searchParams }: { searchParams
       {params.erro === "arquivo" && <p style={{ color: "var(--red)" }}>Selecione um arquivo CSV para importar.</p>}
       <section className="grid grid-2">
         <div>
-          <ResultForm action={createResult} indicators={indicators} defaultIndicatorId={selectedIndicator} />
+          <ResultForm action={createResult} indicators={indicators} defaultIndicatorId={manualIndicator} />
         </div>
         <div className="card form">
           <h3>Importação por planilha</h3>
-          <p className="muted">Escolha o indicador, baixe o modelo, preencha todos os meses necessários no Excel e importe o CSV. Cada linha ou coluna de competência será processada no seu próprio período.</p>
+          <p className="muted">Escolha o indicador apenas para gerar o modelo. Na importação, cada linha será vinculada exclusivamente pelo codigo_indicador informado no arquivo.</p>
           <form className="form">
             <label>Indicador para modelo
-              <select className="select" name="indicatorId" defaultValue={selectedIndicator}>
+              <select className="select" name="modelIndicatorId" defaultValue={modelIndicator}>
                 {indicators.map((indicator) => <option key={indicator.id} value={indicator.id}>{indicator.code} - {indicator.name}</option>)}
               </select>
             </label>
             <button className="button secondary" type="submit">Selecionar indicador</button>
           </form>
-          <Link className="button" href={`/lancamentos/modelo?indicatorId=${selectedIndicator}`}>Exportar modelo de planilha</Link>
+          <Link className="button" href={`/lancamentos/modelo?indicatorId=${modelIndicator}`}>Exportar modelo de planilha</Link>
           <form action={importMonthlyResults} className="form">
-            <input name="fallbackCode" type="hidden" value={indicators.find((indicator) => indicator.id === selectedIndicator)?.code ?? ""} />
             <label>Arquivo preenchido<input className="input" name="file" type="file" accept=".csv,text/csv" required /></label>
             <button className="button" type="submit">Solicitar importação de dados</button>
           </form>

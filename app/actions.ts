@@ -301,7 +301,7 @@ export async function importMonthlyResults(formData: FormData) {
   } catch {
     text = new TextDecoder("windows-1252").decode(bytes);
   }
-  const parsed = normalizeImportedRows(parseResultCsv(text), value(formData, "fallbackCode"));
+  const parsed = normalizeImportedRows(parseResultCsv(text));
   const rejectionDetails = parsed.rejected.map((item) => `linha ${item.row}: ${item.reason}`);
   const codes = [...new Set(parsed.rows.map((row) => row.code))];
   const indicators = await prisma.indicator.findMany({ where: { code: { in: codes } }, include: { goals: true } });
