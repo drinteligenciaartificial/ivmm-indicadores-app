@@ -84,7 +84,12 @@ export function parseResultCsv(text: string): CsvRow[] {
 }
 
 export function parseLocalizedNumber(input: unknown) {
-  const source = String(input ?? "").trim().replace(/\s/g, "").replace(/%$/, "");
+  const original = String(input ?? "").trim();
+  const negative = /^\(.*\)$/.test(original);
+  const source = original
+    .replace(/^\((.*)\)$/, "$1")
+    .replace(/[\s\u00a0]/g, "")
+    .replace(/[^0-9,.-]/g, "");
   if (!source) return null;
   let normalized = source;
   if (source.includes(",") && source.includes(".")) {
@@ -93,9 +98,11 @@ export function parseLocalizedNumber(input: unknown) {
       : source.replace(/,/g, "");
   } else if (source.includes(",")) {
     normalized = source.replace(/\./g, "").replace(",", ".");
+  } else if (/^-?\d{1,3}(\.\d{3})+$/.test(source)) {
+    normalized = source.replace(/\./g, "");
   }
   const number = Number(normalized);
-  return Number.isFinite(number) ? number : null;
+  return Number.isFinite(number) ? (negative ? -Math.abs(number) : number) : null;
 }
 
 function validPeriod(year: number, month: number) {
@@ -142,6 +149,7 @@ function explicitPeriod(row: CsvRow) {
 const fixedHeaders = new Set([
   "codigo_indicador", "codigo", "indicador", "ano", "year", "mes", "month", "competencia", "periodo", "referencia", "data", "mes_ano",
   "resultado", "valor", "valor_realizado", "realizado", "meta", "valor_meta", "analise", "observacao", "comentario", "plano_acao", "plano_de_acao", "acao",
+  "unidade", "unit", "formato",
 ]);
 
 export function normalizeImportedRows(rows: CsvRow[], fallbackCode = "") {
