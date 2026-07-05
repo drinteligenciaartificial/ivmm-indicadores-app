@@ -298,6 +298,11 @@ textarea {
   color: var(--red);
 }
 
+.badge.SEM_META {
+  background: #ececef;
+  color: #5f6470;
+}
+
 .form {
   display: grid;
   gap: 16px;
