@@ -65,11 +65,12 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       return true;
     })
     .map((result) => ({ indicator, result })));
+  const evaluatedRecords = records.filter((item) => item.result.trafficLight !== "SEM_META");
   const latestByIndicator = [...new Map(records.map((record) => [record.indicator.id, record])).values()];
-  const avg = records.length ? records.reduce((sum, item) => sum + item.result.achievement, 0) / records.length : 0;
-  const critical = records.filter((item) => item.result.trafficLight === "VERMELHO").length;
+  const avg = evaluatedRecords.length ? evaluatedRecords.reduce((sum, item) => sum + item.result.achievement, 0) / evaluatedRecords.length : 0;
+  const critical = evaluatedRecords.filter((item) => item.result.trafficLight === "VERMELHO").length;
 
-  const byArea = Object.values(records.reduce((acc: Record<string, { area: string; total: number; count: number }>, item) => {
+  const byArea = Object.values(evaluatedRecords.reduce((acc: Record<string, { area: string; total: number; count: number }>, item) => {
     if (!acc[item.indicator.area]) acc[item.indicator.area] = { area: formatArea(item.indicator.area), total: 0, count: 0 };
     acc[item.indicator.area].total += item.result.achievement;
     acc[item.indicator.area].count += 1;
@@ -77,18 +78,18 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   }, {})).map((area) => ({ area: area.area, media: Number((area.total / area.count).toFixed(1)) }));
   const traffic = ["VERDE", "AMARELO", "VERMELHO"].map((name) => ({
     name,
-    value: records.filter((item) => item.result.trafficLight === name).length,
+    value: evaluatedRecords.filter((item) => item.result.trafficLight === name).length,
   }));
 
-  const periods = [...new Set(records.map((item) => monthKey(item.result.referenceDate)))].sort();
+  const periods = [...new Set(evaluatedRecords.map((item) => monthKey(item.result.referenceDate)))].sort();
   const comparisonSeries = indicators
-    .filter((indicator) => records.some((item) => item.indicator.id === indicator.id))
+    .filter((indicator) => evaluatedRecords.some((item) => item.indicator.id === indicator.id))
     .map((indicator) => ({ key: `indicator_${indicator.id}`, label: `${indicator.code} - ${indicator.name}` }));
   const periodSeries = periods.map((period) => {
     const row: { period: string; reference: number } & Record<string, string | number> = { period: periodLabel(period), reference: 100 };
     comparisonSeries.forEach((series) => {
       const indicatorId = series.key.replace("indicator_", "");
-      const values = records.filter((item) => item.indicator.id === indicatorId && monthKey(item.result.referenceDate) === period);
+      const values = evaluatedRecords.filter((item) => item.indicator.id === indicatorId && monthKey(item.result.referenceDate) === period);
       if (values.length) row[series.key] = Number((values.reduce((sum, item) => sum + item.result.achievement, 0) / values.length).toFixed(2));
     });
     return row;
@@ -98,13 +99,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     const indicatorId = series.key.replace("indicator_", "");
     const row: { indicator: string } & Record<string, string | number> = { indicator: series.label.split(" - ")[0] };
     columnMonths.forEach((month, index) => {
-      const values = records.filter((item) => item.indicator.id === indicatorId && monthKey(item.result.referenceDate) === periods[index]);
+      const values = evaluatedRecords.filter((item) => item.indicator.id === indicatorId && monthKey(item.result.referenceDate) === periods[index]);
       if (values.length) row[month.key] = Number((values.reduce((sum, item) => sum + item.result.achievement, 0) / values.length).toFixed(2));
     });
     return row;
   });
   const exportPeriodSeries = periods.map((period) => {
-    const values = records.filter((item) => monthKey(item.result.referenceDate) === period);
+    const values = evaluatedRecords.filter((item) => monthKey(item.result.referenceDate) === period);
     return { period: periodLabel(period), value: Number((values.reduce((sum, item) => sum + item.result.achievement, 0) / (values.length || 1)).toFixed(2)), target: 100 };
   });
   const showLine = filters.chartMode === "COMPLETO" || filters.chartMode === "LINHA";
@@ -131,8 +132,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       name: indicator.name,
       area: formatArea(indicator.area),
       actual: formatIndicatorValue(result.actualValue, indicator.unit),
-      target: formatIndicatorValue(result.targetValue, indicator.unit),
-      achievement: `${result.achievement.toFixed(1)}%`,
+      target: result.trafficLight === "SEM_META" ? "-" : formatIndicatorValue(result.targetValue, indicator.unit),
+      achievement: result.trafficLight === "SEM_META" ? "-" : `${result.achievement.toFixed(1)}%`,
       trafficLight: result.trafficLight,
     })),
   };
@@ -173,7 +174,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           <h3>Resultados do período</h3>
           <div className="table-wrap"><table className="table">
             <thead><tr><th>Referência</th><th>Código</th><th>Indicador</th><th>Área</th><th>Resultado</th><th>Meta</th><th>Atingimento</th><th>Status</th></tr></thead>
-            <tbody>{sortedRecords.map(({ indicator, result }) => <tr key={result.id}><td>{monthKey(result.referenceDate)}</td><td>{indicator.code}</td><td>{indicator.name}</td><td>{formatArea(indicator.area)}</td><td>{formatIndicatorValue(result.actualValue, indicator.unit)}</td><td>{formatIndicatorValue(result.targetValue, indicator.unit)}</td><td>{result.achievement.toFixed(1)}%</td><td><TrafficBadge value={result.trafficLight} /></td></tr>)}</tbody>
+            <tbody>{sortedRecords.map(({ indicator, result }) => <tr key={result.id}><td>{monthKey(result.referenceDate)}</td><td>{indicator.code}</td><td>{indicator.name}</td><td>{formatArea(indicator.area)}</td><td>{formatIndicatorValue(result.actualValue, indicator.unit)}</td><td>{result.trafficLight === "SEM_META" ? "-" : formatIndicatorValue(result.targetValue, indicator.unit)}</td><td>{result.trafficLight === "SEM_META" ? "-" : `${result.achievement.toFixed(1)}%`}</td><td><TrafficBadge value={result.trafficLight} /></td></tr>)}</tbody>
           </table></div>
         </section>
       </section>
