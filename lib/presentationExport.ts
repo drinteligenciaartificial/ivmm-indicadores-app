@@ -12,6 +12,37 @@ export type IndicatorExportRow = {
   trafficLight?: string;
 };
 
+function escapeHtml(value: string) {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+export function tableWorkbook(title: string, subtitle: string, headers: string[], rows: string[][]) {
+  const tableRows = rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`).join("");
+  return `<!doctype html>
+  <html>
+    <head>
+      <meta charset="utf-8" />
+      <style>
+        body{font-family:Arial,Helvetica,sans-serif;background:#f7f6f4;color:#22283f}
+        .title{background:#1b2551;color:white;font-size:22px;font-weight:700;padding:18px;border-bottom:4px solid #a4866e}
+        .subtitle{background:#f5f1eb;color:#696d7b;padding:10px 18px}
+        table{border-collapse:collapse;width:100%;background:white}
+        th{background:#e2d9cb;color:#1b2551;font-weight:700}
+        th,td{border:1px solid #ded8d0;padding:10px;text-align:left;vertical-align:top}
+        tr:nth-child(even) td{background:#f7f4ef}
+      </style>
+    </head>
+    <body>
+      <div class="title">${escapeHtml(title)}</div>
+      <div class="subtitle">${escapeHtml(subtitle)}</div>
+      <table>
+        <thead><tr>${headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("")}</tr></thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+    </body>
+  </html>`;
+}
+
 export function indicatorWorkbook(rows: IndicatorExportRow[]) {
   const tableRows = rows.map((row) => `
     <tr>
