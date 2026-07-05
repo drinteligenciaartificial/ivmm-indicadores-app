@@ -5,7 +5,7 @@ import { requireFeature } from "@/lib/auth";
 import { areas, trafficLights } from "@/lib/constants";
 import { formatArea, formatIndicatorValue } from "@/lib/kpi";
 import { prisma } from "@/lib/prisma";
-import { Filter, RotateCcw } from "lucide-react";
+import { FileSpreadsheet, FileText, Filter, RotateCcw } from "lucide-react";
 
 function param(searchParams: Record<string, string | string[] | undefined>, key: string) {
   const value = searchParams[key];
@@ -32,12 +32,17 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
       include: { indicator: true },
     }),
   ]);
+  const exportQuery = new URLSearchParams(Object.entries(filters).filter(([, value]) => value)).toString();
 
   return (
     <>
       <section className="page-header">
         <div><h2>Resultados</h2><p>Consulte e gerencie os resultados apurados por indicador.</p></div>
-        <Link className="button" href="/resultados/novo">Novo resultado</Link>
+        <div className="inline-actions">
+          <Link className="button secondary" href={`/resultados/export/excel?${exportQuery}`}><FileSpreadsheet aria-hidden="true" size={17} />Excel</Link>
+          <Link className="button secondary" href={`/resultados/export/pdf?${exportQuery}`}><FileText aria-hidden="true" size={17} />PDF</Link>
+          <Link className="button" href="/resultados/novo">Novo resultado</Link>
+        </div>
       </section>
       <form className="card filters result-filters">
         <label>Indicador<select className="select" name="indicatorId" defaultValue={filters.indicatorId}><option value="">Todos</option>{indicators.map((indicator) => <option key={indicator.id} value={indicator.id}>{indicator.code} - {indicator.name}</option>)}</select></label>
