@@ -152,12 +152,12 @@ const fixedHeaders = new Set([
   "unidade", "unit", "formato",
 ]);
 
-export function normalizeImportedRows(rows: CsvRow[], fallbackCode = "") {
+export function normalizeImportedRows(rows: CsvRow[]) {
   const normalized: ImportedResultRow[] = [];
   const rejected: Array<{ row: number; reason: string }> = [];
   rows.forEach((row, index) => {
     const sourceRow = index + 2;
-    const code = firstValue(row, ["codigo_indicador", "codigo", "indicador"]) || fallbackCode;
+    const code = firstValue(row, ["codigo_indicador", "codigo", "indicador"]).trim().toUpperCase();
     const period = explicitPeriod(row);
     const commonTarget = parseLocalizedNumber(firstValue(row, ["meta", "valor_meta"]));
     const analysis = firstValue(row, ["analise", "observacao", "comentario"]) || null;
