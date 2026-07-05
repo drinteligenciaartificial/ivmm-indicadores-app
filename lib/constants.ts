@@ -44,6 +44,17 @@ export const polarities = [
   ["MENOR_MELHOR", "Quanto menor, melhor"],
 ] as const;
 
+export const indicatorUnits = [
+  ["%", "Percentual (%)"],
+  ["R$", "Moeda brasileira (R$)"],
+  ["número", "Número absoluto"],
+  ["minutos", "Tempo em minutos"],
+  ["horas", "Tempo em horas"],
+  ["dias", "Tempo em dias"],
+  ["pacientes por turno", "Pacientes por turno"],
+  ["pontos", "Pontos ou índice"],
+] as const;
+
 export const frequencies = [
   ["DIARIA", "Diária"],
   ["SEMANAL", "Semanal"],
