@@ -1,4 +1,4 @@
-import { areas, frequencies, indicatorLevels, indicatorTypes, perspectives, polarities, statuses } from "@/lib/constants";
+import { areas, frequencies, indicatorLevels, indicatorTypes, indicatorUnits, perspectives, polarities, statuses } from "@/lib/constants";
 
 type Option = readonly [string, string];
 
@@ -46,6 +46,9 @@ export function CheckboxField({ label, name, defaultChecked }: { label: string; 
 }
 
 export function IndicatorForm({ action, indicator }: { action: (formData: FormData) => void; indicator?: any }) {
+  const unitOptions: readonly Option[] = indicator?.unit && !indicatorUnits.some(([value]) => value === indicator.unit)
+    ? [[indicator.unit, indicator.unit], ...indicatorUnits]
+    : indicatorUnits;
   return (
     <form action={action} className="card form">
       <div className="grid grid-3">
@@ -60,7 +63,7 @@ export function IndicatorForm({ action, indicator }: { action: (formData: FormDa
       </div>
       <div className="grid grid-3">
         <SelectField label="Polaridade" name="polarity" options={polarities} defaultValue={indicator?.polarity} />
-        <TextField label="Unidade" name="unit" defaultValue={indicator?.unit} placeholder="%, R$, dias..." />
+        <SelectField label="Unidade de apresentação" name="unit" options={unitOptions} defaultValue={indicator?.unit ?? "número"} />
         <SelectField label="Status" name="status" options={statuses} defaultValue={indicator?.status ?? "ATIVO"} />
       </div>
       <div className="grid grid-3">
