@@ -107,13 +107,15 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     const values = records.filter((item) => monthKey(item.result.referenceDate) === period);
     return { period: periodLabel(period), value: Number((values.reduce((sum, item) => sum + item.result.actualValue, 0) / (values.length || 1)).toFixed(2)) };
   });
-  const showLine = filters.chartMode === "COMPLETO" || filters.chartMode === "LINHA";
-  const showPie = filters.chartMode === "COMPLETO" || filters.chartMode === "PIZZA";
-  const showBar = filters.chartMode === "COMPLETO" || filters.chartMode === "BARRAS";
+  const isComparison = indicatorIds.length > 1;
+  const effectiveChartMode = isComparison ? "LINHA" : filters.chartMode;
+  const showLine = effectiveChartMode === "COMPLETO" || effectiveChartMode === "LINHA";
+  const showPie = effectiveChartMode === "COMPLETO" || effectiveChartMode === "PIZZA";
+  const showBar = effectiveChartMode === "COMPLETO" || effectiveChartMode === "BARRAS";
 
   const sortedRecords = [...records].sort((a, b) => b.result.referenceDate.getTime() - a.result.referenceDate.getTime());
   const exportData = {
-    chartMode: filters.chartMode,
+    chartMode: effectiveChartMode,
     metrics: [
       { label: "Indicadores no período", value: latestByIndicator.length },
       { label: "Competências analisadas", value: records.length },
@@ -157,6 +159,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <label>Apresentação<select className="select" name="chartMode" defaultValue={filters.chartMode}><option value="COMPLETO">Painel completo</option><option value="LINHA">Comparação em linhas</option><option value="PIZZA">Distribuição em pizza</option><option value="BARRAS">Resultados em colunas</option></select></label>
         <div className="filter-actions"><button className="button" type="submit"><LayoutDashboard aria-hidden="true" size={18} />Gerar dashboard</button></div>
       </form>
+      {isComparison && <p className="muted" style={{ marginTop: 10 }}>Comparações entre indicadores são apresentadas exclusivamente em gráfico de linhas.</p>}
       <section id="dashboard-export-area" className="dashboard-export-area" style={{ marginTop: 18 }}>
         <section className="grid grid-4">
           <KpiCard label="Indicadores no período" value={latestByIndicator.length} />
