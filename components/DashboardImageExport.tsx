@@ -18,7 +18,7 @@ type DashboardExportData = {
   metrics: { label: string; value: string | number }[];
   byArea: { area: string; media: number }[];
   traffic: { name: string; value: number }[];
-  periodSeries: { period: string; value: number; target: number }[];
+  periodSeries: { period: string; value: number }[];
   lineValueLabel: string;
   lineTargetLabel: string;
   rows: ExportRow[];
@@ -29,6 +29,7 @@ const colors: Record<string, string> = {
   AMARELO: "#9b6b0b",
   VERMELHO: "#b4313c",
 };
+const chartColors = ["#1b2551", "#a4866e", "#237a4b", "#b4313c", "#4f6d9b", "#9b6b0b", "#6b4e71", "#2f7f7b"];
 
 function roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius = 8) {
   ctx.beginPath();
@@ -98,7 +99,7 @@ function drawDashboard(data: DashboardExportData, format: "png" | "jpeg") {
     ctx.fillStyle = "#1b2551";
     ctx.font = "700 20px Arial";
     ctx.fillText("Evolução no período", 64, chartY + 40);
-    const values = data.periodSeries.flatMap((item) => [item.value, item.target]);
+    const values = data.periodSeries.map((item) => item.value);
     const maxLine = Math.max(1, ...values);
     const plotX = 90;
     const plotY = chartY + 76;
@@ -109,19 +110,18 @@ function drawDashboard(data: DashboardExportData, format: "png" | "jpeg") {
     ctx.moveTo(plotX, plotY + plotHeight);
     ctx.lineTo(plotX + plotWidth, plotY + plotHeight);
     ctx.stroke();
-    const drawLine = (key: "value" | "target", color: string) => {
+    const drawLine = (color: string) => {
       ctx.strokeStyle = color;
-      ctx.lineWidth = key === "value" ? 3 : 2;
+      ctx.lineWidth = 3;
       ctx.beginPath();
       data.periodSeries.forEach((item, index) => {
         const x = plotX + (data.periodSeries.length > 1 ? index * plotWidth / (data.periodSeries.length - 1) : plotWidth / 2);
-        const y = plotY + plotHeight - (item[key] / maxLine) * plotHeight;
+        const y = plotY + plotHeight - (item.value / maxLine) * plotHeight;
         if (index === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
       });
       ctx.stroke();
     };
-    drawLine("value", "#1b2551");
-    drawLine("target", "#a4866e");
+    drawLine("#1b2551");
     ctx.lineWidth = 1;
     ctx.font = "13px Arial";
     ctx.fillStyle = "#696d7b";
@@ -131,8 +131,6 @@ function drawDashboard(data: DashboardExportData, format: "png" | "jpeg") {
     });
     ctx.fillStyle = "#1b2551";
     ctx.fillText(data.lineValueLabel, 100, chartY + 330);
-    ctx.fillStyle = "#a4866e";
-    ctx.fillText(data.lineTargetLabel, 350, chartY + 330);
     chartY += 390;
   }
 
@@ -144,8 +142,8 @@ function drawDashboard(data: DashboardExportData, format: "png" | "jpeg") {
   ctx.stroke();
   ctx.fillStyle = "#1b2551";
   ctx.font = "700 20px Arial";
-  ctx.fillText("Atingimento por área", 64, chartY + 40);
-  const max = Math.max(100, ...data.byArea.map((item) => item.media));
+  ctx.fillText("Resultados médios por área", 64, chartY + 40);
+  const max = Math.max(1, ...data.byArea.map((item) => item.media));
   data.byArea.forEach((item, index) => {
     const y = chartY + 84 + index * 42;
     const barWidth = Math.round((item.media / max) * 420);
@@ -157,7 +155,7 @@ function drawDashboard(data: DashboardExportData, format: "png" | "jpeg") {
     ctx.fillStyle = "#1b2551";
     ctx.fillRect(210, y, barWidth, 22);
     ctx.fillStyle = "#22283f";
-    ctx.fillText(`${item.media.toFixed(1)}%`, 640, y + 16);
+    ctx.fillText(item.media.toFixed(1), 640, y + 16);
   });
   }
 
@@ -173,7 +171,7 @@ function drawDashboard(data: DashboardExportData, format: "png" | "jpeg") {
   ctx.fillText("Distribuição dos resultados", pieX + 28, chartY + 40);
   const totalTraffic = data.traffic.reduce((sum, item) => sum + item.value, 0) || 1;
   let start = -Math.PI / 2;
-  data.traffic.forEach((item) => {
+  data.traffic.forEach((item, index) => {
     const angle = (item.value / totalTraffic) * Math.PI * 2;
     ctx.beginPath();
     const centerX = showBar ? 910 : 520;
@@ -181,13 +179,13 @@ function drawDashboard(data: DashboardExportData, format: "png" | "jpeg") {
     ctx.moveTo(centerX, centerY);
     ctx.arc(centerX, centerY, 120, start, start + angle);
     ctx.closePath();
-    ctx.fillStyle = colors[item.name] ?? "#888888";
+    ctx.fillStyle = chartColors[index % chartColors.length];
     ctx.fill();
     start += angle;
   });
   data.traffic.forEach((item, index) => {
     const y = chartY + 118 + index * 40;
-    ctx.fillStyle = colors[item.name] ?? "#888888";
+    ctx.fillStyle = chartColors[index % chartColors.length];
     ctx.fillRect(showBar ? 1080 : 760, y, 22, 22);
     ctx.fillStyle = "#22283f";
     ctx.font = "15px Arial";
