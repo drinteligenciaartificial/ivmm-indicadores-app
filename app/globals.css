@@ -361,6 +361,38 @@ textarea {
   background: var(--navy-soft);
 }
 
+.button:disabled,
+.ghost-button:disabled {
+  cursor: wait;
+  opacity: 0.78;
+}
+
+.button[aria-busy="true"],
+.ghost-button[aria-busy="true"],
+.button[data-loading="true"],
+.ghost-button[data-loading="true"] {
+  pointer-events: none;
+}
+
+.button[data-loading="true"]::before,
+.ghost-button[data-loading="true"]::before,
+.button-spinner {
+  content: "";
+  width: 16px;
+  height: 16px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  display: inline-block;
+  animation: button-spin 700ms linear infinite;
+}
+
+@keyframes button-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .button.secondary {
   border-color: var(--bronze);
   background: var(--ivory-soft);
