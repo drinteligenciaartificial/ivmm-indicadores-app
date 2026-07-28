@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { loadOfficialData } from "./official-data.ts";
+import { syncCommercialFunnelIndicators } from "./commercial-funnel-data.ts";
 import { hashPassword } from "../lib/password.ts";
 
 const prisma = new PrismaClient();
@@ -16,6 +17,7 @@ async function main() {
     ],
   });
   await loadOfficialData(prisma, { name: "Seed", role: "SISTEMA" });
+  await syncCommercialFunnelIndicators(prisma, { name: "Seed", role: "SISTEMA" });
 }
 
 main().finally(() => prisma.$disconnect());
