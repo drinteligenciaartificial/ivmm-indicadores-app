@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { hashPassword } from "../lib/password.ts";
 import { loadOfficialData } from "./official-data.ts";
+import { commercialFunnelIndicatorCodes, syncCommercialFunnelIndicators } from "./commercial-funnel-data.ts";
 
 const prisma = new PrismaClient();
 const allPermissions = ["dashboard", "indicadores", "metas", "resultados", "lancamentos", "scorecard", "bsc", "okrs", "head-operacoes", "conselho", "ia-automacao", "historico", "exportacoes", "usuarios"];
@@ -111,6 +112,28 @@ async function main() {
 
   if (indicatorCount === 0) {
     await loadOfficialData(prisma, { name: "Bootstrap Render", role: "SISTEMA" });
+  }
+
+  const funnelIndicatorCount = await prisma.indicator.count({
+    where: { code: { in: commercialFunnelIndicatorCodes } },
+  });
+  const funnelMarker = await prisma.auditLog.findFirst({
+    where: { entity: "SYSTEM", action: "COMMERCIAL_FUNNEL_INDICATORS_V1" },
+  });
+
+  if (!funnelMarker || funnelIndicatorCount < commercialFunnelIndicatorCodes.length) {
+    await syncCommercialFunnelIndicators(prisma, { name: "Bootstrap Render", role: "SISTEMA" });
+    if (!funnelMarker) {
+      await prisma.auditLog.create({
+        data: {
+          entity: "SYSTEM",
+          action: "COMMERCIAL_FUNNEL_INDICATORS_V1",
+          summary: "Indicadores oficiais do funil comercial cadastrados para integração com Kommo.",
+          actorName: "Bootstrap Render",
+          actorRole: "SISTEMA",
+        },
+      });
+    }
   }
 
 }
