@@ -3,7 +3,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { LogIn, LogOut, UserRound } from "lucide-react";
 import { logout } from "@/app/actions";
+import { GlobalButtonLoading } from "@/components/GlobalButtonLoading";
 import { SidebarNav } from "@/components/SidebarNav";
+import { SubmitButton } from "@/components/SubmitButton";
 import { canAccess, getCurrentUser } from "@/lib/auth";
 import { features } from "@/lib/constants";
 import { formatRole } from "@/lib/kpi";
@@ -22,6 +24,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="pt-BR">
       <body>
+        <GlobalButtonLoading />
         <div className={`layout${user ? "" : " logged-out"}`}>
           <aside className="sidebar">
             <Link className="brand-lockup" href="/" aria-label="Instituto Viver Mais e Melhor">
@@ -38,7 +41,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   <b>{user.name}</b>
                   <span>{formatRole(user.role)}</span>
                   <Link className="ghost-button" href="/perfil"><UserRound aria-hidden="true" size={16} />Meu perfil</Link>
-                  <form action={logout}><button className="ghost-button" type="submit"><LogOut aria-hidden="true" size={16} />Sair</button></form>
+                  <form action={logout}><SubmitButton className="ghost-button" pendingLabel="Saindo..."><LogOut aria-hidden="true" size={16} />Sair</SubmitButton></form>
                 </>
               ) : (
                 <Link className="ghost-button" href="/login"><LogIn aria-hidden="true" size={16} />Entrar</Link>
