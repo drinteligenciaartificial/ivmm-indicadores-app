@@ -1,4 +1,5 @@
 import { login } from "@/app/actions";
+import { SubmitButton } from "@/components/SubmitButton";
 import { prisma } from "@/lib/prisma";
 import Image from "next/image";
 
@@ -33,9 +34,9 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         </label>
         <label>
           Senha
-          <input className="input" name="password" type="password" autoComplete="current-password" required placeholder={demoLogin ? "admin123, coord123, head123 ou conselho123" : undefined} />
+          <input className="input" name="password" type="password" autoComplete="current-password" required placeholder={demoLogin ? "admin1234, coord1234, head1234 ou conselho123" : undefined} />
         </label>
-        <button className="button" type="submit">Entrar</button>
+        <SubmitButton pendingLabel="Entrando...">Entrar</SubmitButton>
       </form>
     </div>
   );

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Download } from "lucide-react";
 
 type ExportRow = {
@@ -232,10 +233,24 @@ function drawDashboard(data: DashboardExportData, format: "png" | "jpeg") {
 }
 
 export function DashboardImageExport({ data }: { data: DashboardExportData }) {
+  const [exporting, setExporting] = useState<"png" | "jpeg" | null>(null);
+
+  function handleExport(format: "png" | "jpeg") {
+    setExporting(format);
+    window.requestAnimationFrame(() => {
+      drawDashboard(data, format);
+      setExporting(null);
+    });
+  }
+
   return (
     <div className="inline-actions">
-      <button className="button secondary" type="button" onClick={() => drawDashboard(data, "png")}><Download aria-hidden="true" size={17} />Exportar PNG</button>
-      <button className="button secondary" type="button" onClick={() => drawDashboard(data, "jpeg")}><Download aria-hidden="true" size={17} />Exportar JPG</button>
+      <button className="button secondary" type="button" onClick={() => handleExport("png")} disabled={Boolean(exporting)} aria-busy={exporting === "png"}>
+        {exporting === "png" ? <><span className="button-spinner" aria-hidden="true" />Exportando PNG...</> : <><Download aria-hidden="true" size={17} />Exportar PNG</>}
+      </button>
+      <button className="button secondary" type="button" onClick={() => handleExport("jpeg")} disabled={Boolean(exporting)} aria-busy={exporting === "jpeg"}>
+        {exporting === "jpeg" ? <><span className="button-spinner" aria-hidden="true" />Exportando JPG...</> : <><Download aria-hidden="true" size={17} />Exportar JPG</>}
+      </button>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { updateProfile } from "@/app/actions";
+import { SubmitButton } from "@/components/SubmitButton";
 import { requireUser } from "@/lib/auth";
 import { formatRole } from "@/lib/kpi";
 
@@ -25,7 +26,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
           <label>Senha atual<input className="input" name="currentPassword" type="password" required /></label>
           <label>Nova senha<input className="input" name="newPassword" type="password" minLength={8} placeholder="Deixe em branco para manter" /></label>
           <label>Confirmar nova senha<input className="input" name="confirmPassword" type="password" /></label>
-          <button className="button" type="submit">Salvar perfil</button>
+          <SubmitButton pendingLabel="Salvando...">Salvar perfil</SubmitButton>
         </form>
         <div className="card">
           <h3>Permissões ativas</h3>

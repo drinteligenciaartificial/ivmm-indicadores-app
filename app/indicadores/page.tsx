@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatArea, formatPerspective, formatStatus } from "@/lib/kpi";
 import { TrafficBadge } from "@/components/TrafficBadge";
+import { SubmitButton } from "@/components/SubmitButton";
 import { deleteIndicator } from "@/app/actions";
 import { areas, perspectives, trafficLights } from "@/lib/constants";
 import { cleanParams } from "@/lib/filters";
@@ -53,14 +54,14 @@ export default async function IndicatorsPage({ searchParams }: { searchParams: P
         <label>Semáforo<select className="select" name="traffic" defaultValue={params.traffic}><option value="">Todos</option>{trafficLights.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label>
         <div className="filter-actions">
           <Link className="button secondary" href="/indicadores"><RotateCcw aria-hidden="true" size={17} />Limpar</Link>
-          <button className="button" type="submit"><Filter aria-hidden="true" size={17} />Filtrar</button>
+          <SubmitButton pendingLabel="Filtrando..."><Filter aria-hidden="true" size={17} />Filtrar</SubmitButton>
         </div>
       </form>
       <section className="card" style={{ marginTop: 18 }}>
         <div className="table-wrap">
           <table className="table indicator-table">
             <thead><tr><th>Código</th><th>Indicador</th><th>Área</th><th>BSC</th><th>Responsável coleta</th><th>Status</th><th>Atingimento</th><th>Semáforo</th><th>Ações</th></tr></thead>
-            <tbody>{filtered.map(item=>{const last=item.results[0];return <tr key={item.id}><td>{item.code}</td><td><Link href={`/indicadores/${item.id}`}>{item.name}</Link></td><td>{formatArea(item.area)}</td><td>{formatPerspective(item.bscPerspective)}</td><td>{item.collectionOwner}</td><td>{formatStatus(item.status)}</td><td>{last?`${last.achievement.toFixed(1)}%`:"Sem resultado"}</td><td>{last?<TrafficBadge value={last.trafficLight}/>:"-"}</td><td className="actions-cell"><div className="table-actions"><Link className="button small secondary" href={`/indicadores/${item.id}/editar`}><FilePenLine aria-hidden="true" size={15} />Editar</Link><form action={deleteIndicator.bind(null,item.id)}><button className="button small danger" type="submit"><Trash2 aria-hidden="true" size={15} />Excluir</button></form></div></td></tr>})}</tbody>
+            <tbody>{filtered.map(item=>{const last=item.results[0];return <tr key={item.id}><td>{item.code}</td><td><Link href={`/indicadores/${item.id}`}>{item.name}</Link></td><td>{formatArea(item.area)}</td><td>{formatPerspective(item.bscPerspective)}</td><td>{item.collectionOwner}</td><td>{formatStatus(item.status)}</td><td>{last?`${last.achievement.toFixed(1)}%`:"Sem resultado"}</td><td>{last?<TrafficBadge value={last.trafficLight}/>:"-"}</td><td className="actions-cell"><div className="table-actions"><Link className="button small secondary" href={`/indicadores/${item.id}/editar`}><FilePenLine aria-hidden="true" size={15} />Editar</Link><form action={deleteIndicator.bind(null,item.id)}><SubmitButton className="button small danger" pendingLabel="Excluindo..."><Trash2 aria-hidden="true" size={15} />Excluir</SubmitButton></form></div></td></tr>})}</tbody>
           </table>
         </div>
       </section>

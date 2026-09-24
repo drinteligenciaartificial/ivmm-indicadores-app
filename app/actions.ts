@@ -5,13 +5,14 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { audit } from "@/lib/audit";
-import { requireAdmin, requireWriteAccess, requireUser, serializePermissions } from "@/lib/auth";
+import { requireAdmin, requireFeature, requireWriteAccess, requireUser, serializePermissions } from "@/lib/auth";
 import { booleanValue, numberValue, optionalNumber, optionalValue, value } from "@/lib/forms";
 import { calculateAchievement, getTrafficLight } from "@/lib/kpi";
 import { COLLECTION_OWNER } from "@/lib/constants";
 import { hashPassword, passwordNeedsUpgrade, verifyPassword } from "@/lib/password";
 import { createSessionToken, SESSION_COOKIE, sessionCookieOptions } from "@/lib/session";
 import { normalizeImportedRows, parseResultCsv } from "@/lib/result-import";
+import { parseCandidateDocument } from "@/lib/recruitment-document";
 
 function indicatorData(formData: FormData) {
   return {
@@ -92,7 +93,7 @@ async function synchronizeIndicatorGoals(indicatorId: string) {
 }
 
 function revalidateManagementViews() {
-  ["/", "/metas", "/resultados", "/okrs", "/scorecard", "/bsc", "/head-operacoes", "/conselho"]
+  ["/", "/dashboard", "/metas", "/resultados", "/okrs", "/scorecard", "/bsc", "/head-operacoes", "/conselho"]
     .forEach((path) => revalidatePath(path));
 }
 
@@ -187,7 +188,7 @@ export async function createIndicator(formData: FormData) {
   const user = await requireWriteAccess();
   const indicator = await prisma.indicator.create({ data: indicatorData(formData) });
   await audit(user, "Indicador", "CRIAR", `${indicator.code} - ${indicator.name}`, indicator.id);
-  revalidatePath("/");
+  revalidatePath("/dashboard");
   redirect(`/indicadores/${indicator.id}`);
 }
 
@@ -195,7 +196,7 @@ export async function updateIndicator(id: string, formData: FormData) {
   const user = await requireWriteAccess();
   const indicator = await prisma.indicator.update({ where: { id }, data: indicatorData(formData) });
   await audit(user, "Indicador", "EDITAR", `${indicator.code} - ${indicator.name}`, indicator.id);
-  revalidatePath("/");
+  revalidatePath("/dashboard");
   redirect(`/indicadores/${indicator.id}`);
 }
 
@@ -203,7 +204,7 @@ export async function deleteIndicator(id: string) {
   const user = await requireWriteAccess();
   const indicator = await prisma.indicator.delete({ where: { id } });
   await audit(user, "Indicador", "EXCLUIR", `${indicator.code} - ${indicator.name}`, id);
-  revalidatePath("/");
+  revalidatePath("/dashboard");
   redirect("/indicadores");
 }
 
@@ -284,7 +285,7 @@ export async function createResult(formData: FormData) {
     },
   });
   await audit(user, "Resultado", "CRIAR", `${indicator.code} - ${result.achievement.toFixed(1)}%`, result.id);
-  revalidatePath("/");
+  revalidatePath("/dashboard");
   redirect("/resultados");
 }
 
@@ -346,7 +347,7 @@ export async function importMonthlyResults(formData: FormData) {
     ? `${periods.sort((a, b) => a.getTime() - b.getTime())[0].toISOString().slice(0, 7)} a ${periods[periods.length - 1].toISOString().slice(0, 7)}`
     : "sem período válido";
   await audit(user, "Resultado", "IMPORTAR", `${imported} resultado(s): ${created} novo(s), ${updated} atualizado(s), ${deduplicated} duplicado(s) removido(s), ${skipped} ignorado(s); período ${range}; arquivo ${file.name}`);
-  revalidatePath("/");
+  revalidatePath("/dashboard");
   revalidatePath("/resultados");
   const redirectParams = new URLSearchParams({
     importados: String(imported),
@@ -384,7 +385,7 @@ export async function updateResult(id: string, formData: FormData) {
     },
   });
   await audit(user, "Resultado", "EDITAR", `${indicator.code} - ${result.achievement.toFixed(1)}%`, result.id);
-  revalidatePath("/");
+  revalidatePath("/dashboard");
   redirect("/resultados");
 }
 
@@ -392,7 +393,7 @@ export async function deleteResult(id: string) {
   const user = await requireWriteAccess();
   await prisma.result.delete({ where: { id } });
   await audit(user, "Resultado", "EXCLUIR", "Resultado removido", id);
-  revalidatePath("/");
+  revalidatePath("/dashboard");
   redirect("/resultados");
 }
 
@@ -415,7 +416,7 @@ export async function createOkr(formData: FormData) {
     },
   });
   await audit(user, "OKR", "CRIAR", okr.title, okr.id);
-  revalidatePath("/");
+  revalidatePath("/dashboard");
   redirect("/okrs");
 }
 
@@ -440,7 +441,7 @@ export async function updateOkr(id: string, formData: FormData) {
     },
   });
   await audit(user, "OKR", "EDITAR", okr.title, okr.id);
-  revalidatePath("/");
+  revalidatePath("/dashboard");
   redirect("/okrs");
 }
 
@@ -448,10 +449,204 @@ export async function deleteOkr(id: string) {
   const user = await requireWriteAccess();
   const okr = await prisma.okr.delete({ where: { id } });
   await audit(user, "OKR", "EXCLUIR", okr.title, id);
-  revalidatePath("/");
+  revalidatePath("/dashboard");
   redirect("/okrs");
 }
 
 export async function assertLoggedIn() {
   await requireUser();
+}
+
+export async function createRecruitmentPosition(formData: FormData) {
+  const user = await requireFeature("recrutamento");
+  const position = await prisma.recruitmentPosition.create({
+    data: {
+      code: value(formData, "code"),
+      title: value(formData, "title"),
+      department: value(formData, "department"),
+      managerName: optionalValue(formData, "managerName"),
+      mission: value(formData, "mission"),
+      description: value(formData, "description"),
+      responsibilities: value(formData, "responsibilities"),
+      hardSkills: value(formData, "hardSkills"),
+      softSkills: value(formData, "softSkills"),
+      tools: optionalValue(formData, "tools"),
+      education: optionalValue(formData, "education"),
+      experience: optionalValue(formData, "experience"),
+      behavioralProfile: optionalValue(formData, "behavioralProfile"),
+      culturalValues: value(formData, "culturalValues"),
+      eliminatoryCriteria: optionalValue(formData, "eliminatoryCriteria"),
+      desirableCriteria: optionalValue(formData, "desirableCriteria"),
+      remunerationRange: optionalValue(formData, "remunerationRange"),
+      workModel: optionalValue(formData, "workModel"),
+      schedule: optionalValue(formData, "schedule"),
+      competencyWeights: optionalValue(formData, "competencyWeights") || "{}",
+    },
+  });
+  await audit(user, "Cargo de Recrutamento", "CRIAR", `${position.code} - ${position.title}`, position.id);
+  revalidatePath("/recrutamento");
+  revalidatePath("/recrutamento/cargos");
+  redirect("/recrutamento/cargos");
+}
+
+export async function createRecruitmentVacancy(formData: FormData) {
+  const user = await requireFeature("recrutamento");
+  const vacancy = await prisma.recruitmentVacancy.create({
+    data: {
+      code: value(formData, "code"),
+      title: value(formData, "title"),
+      department: value(formData, "department"),
+      positionId: value(formData, "positionId"),
+      status: value(formData, "status") || "ABERTA",
+      openings: numberValue(formData, "openings"),
+      managerName: optionalValue(formData, "managerName"),
+      summary: optionalValue(formData, "summary"),
+    },
+  });
+  await audit(user, "Vaga", "CRIAR", `${vacancy.code} - ${vacancy.title}`, vacancy.id);
+  revalidatePath("/recrutamento");
+  revalidatePath("/recrutamento/processos");
+  redirect("/recrutamento/processos");
+}
+
+export async function createRecruitmentCandidate(formData: FormData) {
+  const user = await requireFeature("recrutamento");
+  const candidate = await prisma.recruitmentCandidate.create({
+    data: {
+      name: value(formData, "name"),
+      email: value(formData, "email").toLowerCase(),
+      phone: optionalValue(formData, "phone"),
+      source: optionalValue(formData, "source"),
+      vacancyId: optionalValue(formData, "vacancyId"),
+      positionId: optionalValue(formData, "positionId"),
+      stage: value(formData, "stage") || "INSCRICAO",
+      professionalSummary: optionalValue(formData, "professionalSummary"),
+      resumeText: optionalValue(formData, "resumeText"),
+      tags: optionalValue(formData, "tags"),
+    },
+  });
+  await prisma.recruitmentStageHistory.create({ data: { candidateId: candidate.id, stage: candidate.stage, actorName: user.name, notes: "Cadastro inicial." } });
+  await audit(user, "Candidato", "CRIAR", candidate.name, candidate.id);
+  revalidatePath("/recrutamento");
+  revalidatePath("/recrutamento/candidatos");
+  redirect(`/recrutamento/candidatos/${candidate.id}`);
+}
+
+export async function importRecruitmentCandidateDocument(formData: FormData) {
+  const user = await requireFeature("recrutamento");
+  const file = formData.get("candidateDocument");
+  if (!(file instanceof File) || file.size === 0) redirect("/recrutamento/candidatos?erro=arquivo");
+
+  const accepted = [
+    "application/pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/msword",
+    "image/png",
+    "image/jpeg",
+  ];
+  const lowerName = file.name.toLowerCase();
+  const acceptedExtension = /\.(pdf|docx|doc|png|jpg|jpeg)$/i.test(lowerName);
+  if (!accepted.includes(file.type) && !acceptedExtension) redirect("/recrutamento/candidatos?erro=formato");
+
+  const extracted = await parseCandidateDocument(file);
+  const fallbackEmail = `pendente-${Date.now()}@ivmm.local`;
+  const summary = [
+    extracted.warning,
+    extracted.professionalSummary,
+  ].filter(Boolean).join("\n\n");
+  const email = extracted.email || fallbackEmail;
+  const candidateData = {
+    name: extracted.name || `Candidato importado - ${file.name.replace(/\.[^.]+$/, "")}`,
+    phone: extracted.phone,
+    source: extracted.source,
+    vacancyId: optionalValue(formData, "vacancyId"),
+    positionId: optionalValue(formData, "positionId"),
+    stage: "TRIAGEM",
+    professionalSummary: summary || "Documento importado. Revise os dados antes de avançar no processo.",
+    resumeText: extracted.resumeText || `Arquivo importado: ${file.name}. Conteúdo textual não extraído automaticamente.`,
+    tags: extracted.tags,
+  };
+  const existing = extracted.email ? await prisma.recruitmentCandidate.findUnique({ where: { email } }) : null;
+  const candidate = existing
+    ? await prisma.recruitmentCandidate.update({ where: { id: existing.id }, data: candidateData })
+    : await prisma.recruitmentCandidate.create({ data: { ...candidateData, email } });
+  await prisma.recruitmentStageHistory.create({
+    data: {
+      candidateId: candidate.id,
+      stage: "TRIAGEM",
+      actorName: user.name,
+      notes: `Cadastro criado por importação de documento: ${file.name}.`,
+    },
+  });
+  await audit(user, "Candidato", "IMPORTAR DOCUMENTO", `${candidate.name} (${file.name})`, candidate.id);
+  revalidatePath("/recrutamento");
+  revalidatePath("/recrutamento/candidatos");
+  redirect(`/recrutamento/candidatos/${candidate.id}`);
+}
+
+export async function moveRecruitmentCandidate(id: string, formData: FormData) {
+  const user = await requireFeature("recrutamento");
+  const stage = value(formData, "stage");
+  const notes = optionalValue(formData, "notes");
+  const candidate = await prisma.recruitmentCandidate.update({ where: { id }, data: { stage } });
+  await prisma.recruitmentStageHistory.create({ data: { candidateId: id, stage, actorName: user.name, notes } });
+  await audit(user, "Candidato", "MOVER ETAPA", `${candidate.name}: ${stage}`, id);
+  revalidatePath("/recrutamento");
+  revalidatePath("/recrutamento/processos");
+  redirect(`/recrutamento/candidatos/${id}`);
+}
+
+export async function createRecruitmentEvaluation(id: string, formData: FormData) {
+  const user = await requireFeature("recrutamento");
+  await prisma.recruitmentEvaluation.create({
+    data: {
+      candidateId: id,
+      type: value(formData, "type") || "ENTREVISTA",
+      evaluatorName: value(formData, "evaluatorName") || user.name,
+      competency: optionalValue(formData, "competency"),
+      score: numberValue(formData, "score"),
+      evidence: value(formData, "evidence"),
+      notes: optionalValue(formData, "notes"),
+    },
+  });
+  await audit(user, "Avaliação de Candidato", "CRIAR", `Avaliação registrada para candidato ${id}`, id);
+  revalidatePath(`/recrutamento/candidatos/${id}`);
+  redirect(`/recrutamento/candidatos/${id}`);
+}
+
+export async function createRecruitmentAssessment(id: string, formData: FormData) {
+  const user = await requireFeature("recrutamento");
+  await prisma.recruitmentAssessment.create({
+    data: {
+      candidateId: id,
+      exercise: value(formData, "exercise"),
+      evaluatorName: value(formData, "evaluatorName") || user.name,
+      score: numberValue(formData, "score"),
+      evidence: value(formData, "evidence"),
+      notes: optionalValue(formData, "notes"),
+    },
+  });
+  await audit(user, "Assessment", "CRIAR", `Assessment registrado para candidato ${id}`, id);
+  revalidatePath(`/recrutamento/candidatos/${id}`);
+  redirect(`/recrutamento/candidatos/${id}`);
+}
+
+export async function registerRecruitmentDecision(id: string, formData: FormData) {
+  const user = await requireFeature("recrutamento");
+  const decision = value(formData, "decision");
+  const candidate = await prisma.recruitmentCandidate.update({
+    where: { id },
+    data: {
+      decision,
+      decisionJustification: value(formData, "decisionJustification"),
+      ...(decision === "ADMITIR" ? { stage: "ADMISSAO" } : {}),
+      ...(decision === "BANCO_TALENTOS" ? { stage: "BANCO_TALENTOS" } : {}),
+      ...(decision === "ENCERRAR" ? { stage: "ENCERRADO" } : {}),
+    },
+  });
+  await prisma.recruitmentStageHistory.create({ data: { candidateId: id, stage: candidate.stage, actorName: user.name, notes: `Decisão humana registrada: ${decision}` } });
+  await audit(user, "Decisão de Recrutamento", "REGISTRAR", `${candidate.name}: ${decision}`, id);
+  revalidatePath("/recrutamento");
+  revalidatePath(`/recrutamento/candidatos/${id}`);
+  redirect(`/recrutamento/candidatos/${id}`);
 }

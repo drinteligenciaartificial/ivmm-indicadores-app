@@ -11,8 +11,8 @@ import { features } from "@/lib/constants";
 import { formatRole } from "@/lib/kpi";
 
 export const metadata = {
-  title: "IVMM | Dashboard Executivo",
-  description: "Dashboard Executivo do Instituto Viver Mais e Melhor",
+  title: "IVMM | Sistema de Gestão Integrada",
+  description: "Sistema de Gestão Integrada do Instituto Viver Mais e Melhor",
 };
 
 const hiddenFeatures = new Set(["exportacoes"]);
@@ -32,7 +32,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </Link>
             <div className="product-title">
               <span>Painel de gestão</span>
-              <h1>Dashboard Executivo</h1>
+              <h1>Sistema Integrado</h1>
             </div>
             <SidebarNav links={navigation} />
             <div className="user-box">

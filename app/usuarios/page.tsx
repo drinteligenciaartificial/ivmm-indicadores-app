@@ -1,4 +1,5 @@
 import { createUser, deleteUser, updateUser } from "@/app/actions";
+import { SubmitButton } from "@/components/SubmitButton";
 import { parsePermissions, requireAdmin } from "@/lib/auth";
 import { features, profiles, rolePermissions } from "@/lib/constants";
 import { formatRole } from "@/lib/kpi";
@@ -29,7 +30,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                 <h3>{user.name}</h3>
                 <p>{user.email} | {formatRole(user.role)}</p>
               </div>
-              <form action={deleteUser.bind(null, user.id)}><button className="button small danger" type="submit">Excluir</button></form>
+              <form action={deleteUser.bind(null, user.id)}><SubmitButton className="button small danger" pendingLabel="Excluindo...">Excluir</SubmitButton></form>
             </div>
             <UserForm action={updateUser.bind(null, user.id)} user={user} />
           </div>
@@ -60,7 +61,7 @@ function UserForm({ action, user }: { action: (formData: FormData) => void; user
           ))}
         </div>
       </fieldset>
-      <button className="button" type="submit">Salvar usuário</button>
+      <SubmitButton pendingLabel="Salvando...">Salvar usuário</SubmitButton>
     </form>
   );
 }

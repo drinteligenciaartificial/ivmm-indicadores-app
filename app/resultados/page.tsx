@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { deleteResult } from "@/app/actions";
 import { TrafficBadge } from "@/components/TrafficBadge";
+import { SubmitButton } from "@/components/SubmitButton";
 import { requireFeature } from "@/lib/auth";
 import { areas, trafficLights } from "@/lib/constants";
 import { formatArea, formatIndicatorValue } from "@/lib/kpi";
@@ -50,13 +51,13 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
         <label>Semáforo<select className="select" name="traffic" defaultValue={filters.traffic}><option value="">Todos</option>{trafficLights.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
         <div className="filter-actions">
           <Link className="button secondary" href="/resultados"><RotateCcw aria-hidden="true" size={17} />Limpar</Link>
-          <button className="button" type="submit"><Filter aria-hidden="true" size={17} />Filtrar</button>
+          <SubmitButton pendingLabel="Filtrando..."><Filter aria-hidden="true" size={17} />Filtrar</SubmitButton>
         </div>
       </form>
       <section className="card">
         <div className="table-wrap"><table className="table">
           <thead><tr><th>Referência</th><th>Indicador</th><th>Área</th><th>Resultado</th><th>Meta</th><th>Atingimento</th><th>Semáforo</th><th>Ações</th></tr></thead>
-          <tbody>{results.map((result) => <tr key={result.id}><td>{result.referenceDate.toISOString().slice(0, 7)}</td><td>{result.indicator.code} - {result.indicator.name}</td><td>{formatArea(result.indicator.area)}</td><td>{formatIndicatorValue(result.actualValue, result.indicator.unit)}</td><td>{result.trafficLight === "SEM_META" ? "-" : formatIndicatorValue(result.targetValue, result.indicator.unit)}</td><td>{result.trafficLight === "SEM_META" ? "-" : `${result.achievement.toFixed(1)}%`}</td><td><TrafficBadge value={result.trafficLight} /></td><td><div className="table-actions"><Link className="button small secondary" href={`/resultados/${result.id}/editar`}>Editar</Link><form action={deleteResult.bind(null, result.id)}><button className="button small danger">Excluir</button></form></div></td></tr>)}</tbody>
+          <tbody>{results.map((result) => <tr key={result.id}><td>{result.referenceDate.toISOString().slice(0, 7)}</td><td>{result.indicator.code} - {result.indicator.name}</td><td>{formatArea(result.indicator.area)}</td><td>{formatIndicatorValue(result.actualValue, result.indicator.unit)}</td><td>{result.trafficLight === "SEM_META" ? "-" : formatIndicatorValue(result.targetValue, result.indicator.unit)}</td><td>{result.trafficLight === "SEM_META" ? "-" : `${result.achievement.toFixed(1)}%`}</td><td><TrafficBadge value={result.trafficLight} /></td><td><div className="table-actions"><Link className="button small secondary" href={`/resultados/${result.id}/editar`}>Editar</Link><form action={deleteResult.bind(null, result.id)}><SubmitButton className="button small danger" pendingLabel="Excluindo...">Excluir</SubmitButton></form></div></td></tr>)}</tbody>
         </table></div>
         {!results.length && <p className="muted">Nenhum resultado encontrado para os filtros selecionados.</p>}
       </section>

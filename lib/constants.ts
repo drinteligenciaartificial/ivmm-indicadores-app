@@ -78,7 +78,11 @@ export const trafficLights = [
 ] as const;
 
 export const features = [
-  ["dashboard", "Dashboard Executivo", "/"],
+  ["hub", "Sistema Integrado", "/"],
+  ["dashboard", "Dashboard Executivo", "/dashboard"],
+  ["recrutamento", "Recrutamento e Seleção", "/recrutamento"],
+  ["financeiro", "Gestão Financeira", "/financeiro"],
+  ["bonificacao", "Programa de Bonificação", "/bonificacao"],
   ["indicadores", "Banco de Indicadores e Fichas", "/indicadores"],
   ["metas", "Metas", "/metas"],
   ["resultados", "Resultados", "/resultados"],
@@ -100,8 +104,8 @@ export const allFeatureKeys = features.map(([key]) => key);
 
 export const rolePermissions: Record<string, string[]> = {
   ADMINISTRADOR: allFeatureKeys,
-  COORDENACAO_ADMINISTRATIVA: ["dashboard", "indicadores", "metas", "resultados", "lancamentos", "scorecard", "bsc", "okrs", "ia-automacao", "historico", "exportacoes"],
-  HEAD_OPERACOES: ["dashboard", "indicadores", "resultados", "scorecard", "bsc", "okrs", "head-operacoes", "ia-automacao", "exportacoes"],
-  CONSELHO_CONSULTIVO: ["dashboard", "indicadores", "scorecard", "bsc", "okrs", "conselho", "exportacoes"],
-  USUARIO_PERSONALIZADO: ["dashboard"],
+  COORDENACAO_ADMINISTRATIVA: ["hub", "dashboard", "recrutamento", "indicadores", "metas", "resultados", "lancamentos", "scorecard", "bsc", "okrs", "ia-automacao", "historico", "exportacoes"],
+  HEAD_OPERACOES: ["hub", "dashboard", "recrutamento", "indicadores", "resultados", "scorecard", "bsc", "okrs", "head-operacoes", "ia-automacao", "exportacoes"],
+  CONSELHO_CONSULTIVO: ["hub", "dashboard", "recrutamento", "indicadores", "scorecard", "bsc", "okrs", "conselho", "exportacoes"],
+  USUARIO_PERSONALIZADO: ["hub", "dashboard"],
 };

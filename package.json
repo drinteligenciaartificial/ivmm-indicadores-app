@@ -23,21 +23,23 @@
   },
   "dependencies": {
     "@prisma/client": "5.22.0",
+    "clsx": "latest",
+    "lucide-react": "latest",
+    "mammoth": "^1.12.2",
     "next": "latest",
+    "pdf-parse": "^2.4.5",
     "react": "latest",
     "react-dom": "latest",
-    "recharts": "latest",
-    "lucide-react": "latest",
-    "clsx": "latest"
+    "recharts": "latest"
   },
   "devDependencies": {
-    "prisma": "5.22.0",
-    "tsx": "latest",
-    "typescript": "latest",
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "eslint": "latest",
-    "eslint-config-next": "latest"
+    "eslint-config-next": "latest",
+    "prisma": "5.22.0",
+    "tsx": "latest",
+    "typescript": "latest"
   }
 }

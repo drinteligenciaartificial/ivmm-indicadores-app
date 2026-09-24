@@ -186,3 +186,143 @@ model IntegrationSync {
 
   @@index([integrationId, startedAt])
 }
+
+model RecruitmentPosition {
+  id                  String                 @id @default(cuid())
+  code                String                 @unique
+  title               String
+  department          String
+  managerName         String?
+  status              String                 @default("ATIVO")
+  mission             String
+  description         String
+  responsibilities    String
+  hardSkills          String
+  softSkills          String
+  tools               String?
+  education           String?
+  experience          String?
+  behavioralProfile   String?
+  culturalValues      String
+  eliminatoryCriteria String?
+  desirableCriteria   String?
+  remunerationRange   String?
+  workModel           String?
+  schedule            String?
+  competencyWeights   String                 @default("{}")
+  vacancies           RecruitmentVacancy[]
+  candidates          RecruitmentCandidate[]
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+}
+
+model RecruitmentVacancy {
+  id             String                 @id @default(cuid())
+  code           String                 @unique
+  title          String
+  department     String
+  positionId     String
+  position       RecruitmentPosition    @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  status         String                 @default("ABERTA")
+  openings       Int                    @default(1)
+  managerName    String?
+  openedAt       DateTime               @default(now())
+  closedAt       DateTime?
+  summary        String?
+  candidates     RecruitmentCandidate[]
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+}
+
+model RecruitmentCandidate {
+  id                    String                    @id @default(cuid())
+  name                  String
+  email                 String                    @unique
+  phone                 String?
+  source                String?
+  status                String                    @default("ATIVO")
+  stage                 String                    @default("INSCRICAO")
+  vacancyId             String?
+  vacancy               RecruitmentVacancy?       @relation(fields: [vacancyId], references: [id], onDelete: SetNull)
+  positionId            String?
+  position              RecruitmentPosition?      @relation(fields: [positionId], references: [id], onDelete: SetNull)
+  resumeText            String?
+  professionalSummary   String?
+  curriculumScore       Float                     @default(0)
+  iacScore              Float                     @default(0)
+  ipdScore              Float                     @default(0)
+  sceScore              Float                     @default(0)
+  qualityOfHireScore    Float?
+  decision              String?
+  decisionJustification String?
+  tags                  String?
+  stageHistory          RecruitmentStageHistory[]
+  evaluations           RecruitmentEvaluation[]
+  assessments           RecruitmentAssessment[]
+  aiAnalyses            RecruitmentAiAnalysis[]
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime                  @updatedAt
+
+  @@index([stage, status])
+  @@index([vacancyId])
+}
+
+model RecruitmentStageHistory {
+  id          String               @id @default(cuid())
+  candidateId String
+  candidate   RecruitmentCandidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  stage       String
+  notes       String?
+  actorName   String
+  createdAt   DateTime             @default(now())
+
+  @@index([candidateId, createdAt])
+}
+
+model RecruitmentEvaluation {
+  id            String               @id @default(cuid())
+  candidateId   String
+  candidate     RecruitmentCandidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  type          String
+  evaluatorName String
+  competency    String?
+  score         Float                @default(0)
+  evidence      String
+  notes         String?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  @@index([candidateId, type])
+}
+
+model RecruitmentAssessment {
+  id            String               @id @default(cuid())
+  candidateId   String
+  candidate     RecruitmentCandidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  exercise      String
+  evaluatorName String
+  score         Float                @default(0)
+  evidence      String
+  notes         String?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  @@index([candidateId])
+}
+
+model RecruitmentAiAnalysis {
+  id            String               @id @default(cuid())
+  candidateId   String
+  candidate     RecruitmentCandidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  analysisType  String
+  promptVersion String
+  model         String
+  contextUsed   String
+  result        String
+  humanFeedback String?
+  status        String               @default("PENDENTE_AVALIACAO_HUMANA")
+  requestedBy   String
+  createdAt     DateTime             @default(now())
+
+  @@index([candidateId, analysisType])
+}

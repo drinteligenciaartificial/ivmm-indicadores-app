@@ -1,4 +1,5 @@
 import { areas, frequencies, indicatorLevels, indicatorTypes, indicatorUnits, perspectives, polarities, statuses } from "@/lib/constants";
+import { SubmitButton } from "@/components/SubmitButton";
 
 type Option = readonly [string, string];
 
@@ -112,7 +113,7 @@ export function IndicatorForm({ action, indicator }: { action: (formData: FormDa
         <CheckboxField label="Fonte integrável por IA" name="isAiIntegrable" defaultChecked={indicator?.isAiIntegrable} />
         <CheckboxField label="Exige auditoria" name="requiresAudit" defaultChecked={indicator?.requiresAudit ?? true} />
       </div>
-      <button className="button" type="submit">Salvar</button>
+      <SubmitButton pendingLabel="Salvando...">Salvar</SubmitButton>
     </form>
   );
 }

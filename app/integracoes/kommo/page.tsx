@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/auth";
 import { kommoEnvironmentReady, kommoRedirectUri } from "@/lib/kommo";
 import { prisma } from "@/lib/prisma";
 import { publishKommoFunnelResults, removeKommoConnection, synchronizeKommo } from "./actions";
+import { SubmitButton } from "@/components/SubmitButton";
 
 const entityLabels: Record<string, string> = {
   LEAD: "Leads",
@@ -76,9 +77,9 @@ export default async function KommoIntegrationPage({ searchParams }: { searchPar
           </Link>
         ) : (
           <>
-            <form action={synchronizeKommo}><button className="button" type="submit"><RefreshCw aria-hidden="true" size={17} /> Sincronizar agora</button></form>
-            <form action={publishKommoFunnelResults}><button className="button secondary" type="submit"><BarChart3 aria-hidden="true" size={17} /> Gerar indicadores</button></form>
-            <form action={removeKommoConnection}><button className="button secondary" type="submit"><Unplug aria-hidden="true" size={17} /> Desconectar</button></form>
+            <form action={synchronizeKommo}><SubmitButton pendingLabel="Sincronizando..."><RefreshCw aria-hidden="true" size={17} /> Sincronizar agora</SubmitButton></form>
+            <form action={publishKommoFunnelResults}><SubmitButton className="button secondary" pendingLabel="Gerando indicadores..."><BarChart3 aria-hidden="true" size={17} /> Gerar indicadores</SubmitButton></form>
+            <form action={removeKommoConnection}><SubmitButton className="button secondary" pendingLabel="Desconectando..."><Unplug aria-hidden="true" size={17} /> Desconectar</SubmitButton></form>
           </>
         )}
       </section>

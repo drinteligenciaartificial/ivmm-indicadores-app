@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createResult, importMonthlyResults } from "@/app/actions";
+import { SubmitButton } from "@/components/SubmitButton";
 import { requireFeature } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ResultForm } from "../resultados/novo/page";
@@ -34,12 +35,12 @@ export default async function MonthlyLaunchPage({ searchParams }: { searchParams
                 {indicators.map((indicator) => <option key={indicator.id} value={indicator.id}>{indicator.code} - {indicator.name}</option>)}
               </select>
             </label>
-            <button className="button secondary" type="submit">Selecionar indicador</button>
+            <SubmitButton className="button secondary" pendingLabel="Selecionando...">Selecionar indicador</SubmitButton>
           </form>
           <Link className="button" href={`/lancamentos/modelo?indicatorId=${modelIndicator}`}>Exportar modelo de planilha</Link>
           <form action={importMonthlyResults} className="form">
             <label>Arquivo preenchido<input className="input" name="file" type="file" accept=".csv,text/csv" required /></label>
-            <button className="button" type="submit">Solicitar importação de dados</button>
+            <SubmitButton pendingLabel="Importando dados...">Solicitar importação de dados</SubmitButton>
           </form>
           <div className="import-help">
             <h3>Colunas esperadas</h3>
