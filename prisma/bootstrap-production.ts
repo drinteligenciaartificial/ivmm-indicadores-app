@@ -30,6 +30,28 @@ const productionProfiles = [
   },
 ];
 
+const temporaryAccessProfiles = [
+  {
+    name: "Administrador IVMM",
+    email: "admin@ivmm.local",
+    password: "scrypt$4325363d98a28c2ccd792b576bc3ff19$4f5aa79686b323622baf3d94fdb342fbc038e2f27506a67a7245156aff5ca021c08aa4e950a0257c3768e51a46394b9163f6709c030594fe94fc2cc79c97d95c",
+    role: "ADMINISTRADOR",
+    permissions: allPermissions,
+  },
+  {
+    ...productionProfiles[0],
+    password: "scrypt$3adbb3dce28db0381ea55450329f7d6e$d86e45ca6f6faf9f34d55dbcbd5330b6a14f616d12f1861f04c451c12f238e7eeb865da4d60dd8107a14cd996f1d8f086350a75784e58720eaf6f4c14b007043",
+  },
+  {
+    ...productionProfiles[1],
+    password: "scrypt$8b7e690609d29e0b12784b934f09f204$9d0c4ddc4846e67b3bafd8e6bd0b9c5dcd77fc83b6ac66733445c4189d8870494965e19c43b75faad2076d259368ac7f04922746488b54c27cb2b8c2d45623a4",
+  },
+  {
+    ...productionProfiles[2],
+    password: "scrypt$e65460319d5359c9c7eeb2fc6821d60e$e2628f6a0e562f0ea5eb60555b5f2e4d47b3a3bf5325e4d424d15b07a7877b24779c19191d0e0614c87c1d00e23024ede30a1b530dc984ba622aa1c3d543b05c",
+  },
+];
+
 function requiredEnvironment(name: string) {
   const input = process.env[name]?.trim();
   if (!input) throw new Error(`${name} deve ser configurado no Render.`);
@@ -105,6 +127,38 @@ async function main() {
         entity: "SYSTEM",
         action: "CONSELHO_PASSWORD_V2",
         summary: "Senha temporária do Conselho Consultivo normalizada.",
+        actorName: "Bootstrap Render",
+        actorRole: "SISTEMA",
+      },
+    });
+  }
+
+  const accessResetMarker = await prisma.auditLog.findFirst({
+    where: { entity: "SYSTEM", action: "PRODUCTION_CREDENTIALS_V3" },
+  });
+
+  if (!accessResetMarker) {
+    for (const profile of temporaryAccessProfiles) {
+      await prisma.user.upsert({
+        where: { email: profile.email },
+        create: {
+          ...profile,
+          permissions: JSON.stringify(profile.permissions),
+        },
+        update: {
+          name: profile.name,
+          password: profile.password,
+          role: profile.role,
+          permissions: JSON.stringify(profile.permissions),
+        },
+      });
+    }
+
+    await prisma.auditLog.create({
+      data: {
+        entity: "SYSTEM",
+        action: "PRODUCTION_CREDENTIALS_V3",
+        summary: "Credenciais temporárias dos perfis de produção redefinidas.",
         actorName: "Bootstrap Render",
         actorRole: "SISTEMA",
       },
