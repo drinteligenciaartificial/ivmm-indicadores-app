@@ -2,7 +2,7 @@ services:
   - type: web
     name: ivmm-indicadores-app
     runtime: node
-    plan: free
+    plan: 0.5c-512mb
     region: virginia
     buildCommand: npm ci --include=dev && npm run build:render
     startCommand: npm run db:deploy:render && npm run bootstrap:production && npm start
@@ -30,7 +30,7 @@ services:
 
 databases:
   - name: ivmm-indicadores-db
-    plan: free
+    plan: 0.1c-256mb
     region: virginia
     databaseName: ivmm_indicadores
     user: ivmm_app

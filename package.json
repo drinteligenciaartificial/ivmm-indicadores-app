@@ -19,6 +19,7 @@
     "import:official": "node --experimental-strip-types prisma/import-official-data.ts",
     "db:deploy:render": "prisma migrate deploy --schema=prisma/postgresql/schema.prisma",
     "bootstrap:production": "node --experimental-strip-types prisma/bootstrap-production.ts",
+    "backup:production": "node scripts/backup-production-db.mjs",
     "seed": "node --experimental-strip-types prisma/seed.ts"
   },
   "dependencies": {
@@ -28,12 +29,14 @@
     "mammoth": "^1.12.2",
     "next": "latest",
     "pdf-parse": "^2.4.5",
+    "pg": "^8.23.0",
     "react": "latest",
     "react-dom": "latest",
     "recharts": "latest"
   },
   "devDependencies": {
     "@types/node": "latest",
+    "@types/pg": "^8.23.1",
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "eslint": "latest",
